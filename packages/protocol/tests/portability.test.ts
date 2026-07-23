@@ -1,4 +1,4 @@
-// The base @claudecode/protocol entry point must stay importable in React Native, which has no
+// The base @claude-code-remote/protocol entry point must stay importable in React Native, which has no
 // `node:` builtins. This walks index.ts's transitive re-exports and asserts none reaches a `node:`
 // module, the whole point of the crypto seam. If someone re-exports crypto-node.ts (or otherwise
 // pulls node:crypto into the base path), RN can no longer import the protocol even for its types,
@@ -32,8 +32,8 @@ test('the base protocol entry point imports no node: builtins (React-Native-port
     for (const m of src.matchAll(/from\s*['"](node:[^'"]+)['"]/g)) offenders.push(`${file} imports '${m[1]}'`);
   }
   assert.deepEqual(offenders, [],
-    'a base-exported protocol module imports a node: builtin, React Native cannot import @claudecode/protocol. ' +
-    'Keep node-specific crypto behind the @claudecode/protocol/node subpath (crypto-node.ts).');
+    'a base-exported protocol module imports a node: builtin, React Native cannot import @claude-code-remote/protocol. ' +
+    'Keep node-specific crypto behind the @claude-code-remote/protocol/node subpath (crypto-node.ts).');
 });
 
 test('the seam is real: the node crypto impl lives in the /node subpath, not the base', () => {

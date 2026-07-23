@@ -1,4 +1,4 @@
-import type { ServerEvent } from '@claudecode/protocol';
+import type { ServerEvent } from '@claude-code-remote/protocol';
 
 interface ReplayEntry {
   seq: number;

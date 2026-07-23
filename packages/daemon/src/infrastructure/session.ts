@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import type { EffortLevel, PermissionMode, SessionInfo, SessionState } from '@claudecode/protocol';
+import type { EffortLevel, PermissionMode, SessionInfo, SessionState } from '@claude-code-remote/protocol';
 import { deriveSessionState } from './sessionState.ts';
 
 export interface SpawnOptions {

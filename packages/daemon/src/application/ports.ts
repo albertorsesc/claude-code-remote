@@ -12,7 +12,7 @@
  *
  * Conformance is structural, so infrastructure classes satisfy these without importing them.
  */
-import type { ApprovalHistoryEntry, EffortLevel, JobInfo, JobState, PermissionMode, PushPlatform, SessionInfo } from '@claudecode/protocol';
+import type { ApprovalHistoryEntry, EffortLevel, JobInfo, JobState, PermissionMode, PushPlatform, SessionInfo } from '@claude-code-remote/protocol';
 
 /** A unit of spawn work. Same shape as the wire type, the queue adds state, not fields. */
 export type Job = JobInfo;

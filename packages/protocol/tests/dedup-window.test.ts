@@ -5,7 +5,7 @@
 // This test characterizes the boundary so a silent change to the window size is caught.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { InboundStream } from '@claudecode/protocol';
+import { InboundStream } from '@claude-code-remote/protocol';
 
 test('immediate duplicate is rejected', () => {
   const inb = new InboundStream();

@@ -13,7 +13,7 @@ cc pair
 ```
 
 This runs `begin_pair` over the local Unix socket, receives the one-time secret, proves possession of
-it, and persists the paired identity to `~/.config/app.claudecode/device.json`. You do this once per
+it, and persists the paired identity to `~/.config/claude-code-remote/device.json`. You do this once per
 machine.
 
 ## Why `begin_pair` is local-only, and why that is a security boundary

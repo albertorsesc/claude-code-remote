@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { generateIdentity, deriveSessionKey, seal, open, FIELD_POLICY } from '@claudecode/protocol/node';
+import { generateIdentity, deriveSessionKey, seal, open, FIELD_POLICY } from '@claude-code-remote/protocol/node';
 
 function pairedKeys() {
   const daemon = generateIdentity();

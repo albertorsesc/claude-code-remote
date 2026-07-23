@@ -7,7 +7,7 @@ claude-code-remote is an npm workspace with three published-shape packages plus 
 - **`packages/protocol`** is the shared wire kernel. It holds the sealed-frame format, the shared
   types, the per-device sequence and dedup primitives, and the client reliability state machine. Its
   base entry point imports no `node:` builtins, so React Native can import it unchanged; the
-  `node:crypto` implementation lives behind a separate `@claudecode/protocol/node` subpath.
+  `node:crypto` implementation lives behind a separate `@claude-code-remote/protocol/node` subpath.
 - **`packages/daemon`** is the daemon, in clean-architecture layers (below).
 - **`packages/cli`** is the `cc` reference client.
 - **`apps/mobile`** is the Expo React Native app. Its on-device crypto is built and verified
@@ -43,7 +43,7 @@ process or a database.
 | `hook/approve-bridge.mjs` | The security boundary. Zero dependencies, fail-closed by construction. |
 | **`packages/protocol/src/`** | **Shared kernel.** The byte-exact wire contract, imported by both sides so neither owns it. |
 | `frame.ts` | The portable E2E wire-format contract: sealed-frame shape, direction binding, associated data, field-visibility policy. No `node:` anything. |
-| `crypto-node.ts` | The `node:crypto` seal/open implementation of that contract, behind the `@claudecode/protocol/node` subpath. The RN app supplies a byte-compatible pure-JS one. |
+| `crypto-node.ts` | The `node:crypto` seal/open implementation of that contract, behind the `@claude-code-remote/protocol/node` subpath. The RN app supplies a byte-compatible pure-JS one. |
 | `sync.ts` | Per-device monotonic seq counter (`OutboundStream`) and inbound dedup (`InboundStream`). |
 | `resend.ts` | The client's reverse buffer for command redelivery (unacked commands, bounded, hard-fail on overflow). |
 | `client.ts` | `ReliableClient`: the sans-IO client reliability state machine (reconnect-replay, inbound dedup, command resend, ack accounting). Written and tested once, driven by the CLI and the RN app over their own transport and crypto. |

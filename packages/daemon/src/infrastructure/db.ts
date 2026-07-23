@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import type { PendingApproval, ApprovalHistoryEntry, JobState, PushPlatform } from '@claudecode/protocol';
+import type { PendingApproval, ApprovalHistoryEntry, JobState, PushPlatform } from '@claude-code-remote/protocol';
 import type { Job } from '../application/ports.ts';
 
 /**

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { PendingApproval } from '@claudecode/protocol';
+import type { PendingApproval } from '@claude-code-remote/protocol';
 
 interface Waiter {
   respond: (decision: 'allow' | 'deny', reason: string) => void;

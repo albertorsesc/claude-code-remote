@@ -12,8 +12,8 @@ Read by `packages/daemon/src/index.ts` (via `infrastructure/config.ts`).
 | --- | --- | --- |
 | `CC_CLIENT_SOCK` | `/tmp/cc-client.sock` | The local Unix socket clients connect to. |
 | `CC_DAEMON_SOCK` | `/tmp/cc-daemon.sock` | The local socket the approval bridge connects to. |
-| `CC_STORE` | `~/.config/app.claudecode/daemon.json` | Daemon identity and paired-device registry. |
-| `CC_DB_PATH` | `~/.config/app.claudecode/daemon.db` | Durable SQLite store: approvals, session history, jobs, push registrations. |
+| `CC_STORE` | `~/.config/claude-code-remote/daemon.json` | Daemon identity and paired-device registry. |
+| `CC_DB_PATH` | `~/.config/claude-code-remote/daemon.db` | Durable SQLite store: approvals, session history, jobs, push registrations. |
 | `CC_CLIENT_TCP_PORT` | unset (no TCP listener) | Port for the tailnet TCP listener. Setting it enables off-machine access. |
 | `CC_CLIENT_TCP_HOST` | `auto` | Bind address. `auto` discovers the Tailscale IP. A literal IP overrides it; `0.0.0.0` binds every interface and logs a warning. |
 | `CC_HOOK_SELF_DENY_MS` | `1200000` (20 min) | How long the bridge waits before self-denying. Must stay comfortably below each managed project's settings `timeout`. |
@@ -32,7 +32,7 @@ Read by `packages/cli/src/cc.ts`.
 | --- | --- | --- |
 | `CC_CLIENT_SOCK` | `/tmp/cc-client.sock` | The local socket to connect to (when no TCP address is set). |
 | `CC_CLIENT_TCP_ADDR` | unset | `host:port` of a daemon reachable over TCP (for example a Tailscale address). When set, the CLI connects here instead of the Unix socket. |
-| `CC_DEVICE_STORE` | `~/.config/app.claudecode/device.json` | This device's paired identity and persistent outbound sequence. |
+| `CC_DEVICE_STORE` | `~/.config/claude-code-remote/device.json` | This device's paired identity and persistent outbound sequence. |
 | `CC_PAIR_CODE` | unset | When set with `cc pair`, redeems an out-of-band pairing code minted by `cc pair-code` on the daemon machine. |
 | `CC_RECONNECT_MAX_ATTEMPTS` | `10` | Reconnect attempts before giving up. |
 | `CC_RECONNECT_BASE_MS` | `1000` | Base delay for exponential backoff between reconnect attempts. |

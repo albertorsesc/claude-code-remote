@@ -1,7 +1,7 @@
 import net from 'node:net';
 import { randomBytes } from 'node:crypto';
-import { open, seal } from '@claudecode/protocol/node';
-import type { ClientCommand, ServerEvent, UnauthClientMessage } from '@claudecode/protocol';
+import { open, seal } from '@claude-code-remote/protocol/node';
+import type { ClientCommand, ServerEvent, UnauthClientMessage } from '@claude-code-remote/protocol';
 import type { DeviceSessionRegistry } from '../domain/deviceSessions.ts';
 import type { Logger, PairingService } from '../application/ports.ts';
 import type { ClientConn, ClientHub } from './clientHub.ts';

@@ -4,11 +4,11 @@
  * dependencies, so every peer imports the same contract and each platform supplies its own byte-
  * compatible crypto IMPLEMENTATION against it:
  *
- *   - the daemon and CLI  -> `@claudecode/protocol/node`  (node:crypto)
+ *   - the daemon and CLI  -> `@claude-code-remote/protocol/node`  (node:crypto)
  *   - the React Native app -> its own module              (pure-JS @noble/*)
  *   - the Python tests     -> tests/integration/_crypto.py
  *
- * Because this file has no `node:crypto`, `@claudecode/protocol` (which re-exports it) is importable
+ * Because this file has no `node:crypto`, `@claude-code-remote/protocol` (which re-exports it) is importable
  * in React Native for the types and the frame format, without pulling a Node built-in into the
  * bundle. The crypto implementation is imported separately, per platform.
  */

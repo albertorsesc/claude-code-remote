@@ -21,17 +21,17 @@ import net from 'node:net';
 import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ReliableClient, neutralizeControlChars, type SessionCrypto } from '@claudecode/protocol';
+import { ReliableClient, neutralizeControlChars, type SessionCrypto } from '@claude-code-remote/protocol';
 import {
   generateIdentity, exportPublic, exportPrivate, importPublic, importPrivate,
   deriveSessionKey, seal, open, pairingProof, type KeyPair,
-} from '@claudecode/protocol/node';
+} from '@claude-code-remote/protocol/node';
 import { type DeviceRecord, loadDevice, saveDevice, reserveOutSeq } from './deviceStore.ts';
 import { encodePairCode, decodePairCode, tcpTargetFromAddr, type PairPayload } from './pairing.ts';
 
 const SOCK = process.env.CC_CLIENT_SOCK || '/tmp/cc-client.sock';
 const DEVICE_STORE = process.env.CC_DEVICE_STORE ||
-  path.join(os.homedir(), '.config', 'app.claudecode', 'device.json');
+  path.join(os.homedir(), '.config', 'claude-code-remote', 'device.json');
 const WHO = `${os.hostname()}/cli`;
 const [cmd, ...rest] = process.argv.slice(2);
 
@@ -231,7 +231,7 @@ if (cmd === 'pair-code') {
 // everything is a SealedFrame. No plaintext command execution after this point.
 //
 // The reliable-delivery state machine (reconnect-replay, inbound dedup, command resend, ack
-// accounting) is NOT here, it lives in @claudecode/protocol's ReliableClient, shared byte-for-byte
+// accounting) is NOT here, it lives in @claude-code-remote/protocol's ReliableClient, shared byte-for-byte
 // with the RN app. This file is only the CLI HOST for that engine: it owns the node:net socket, the
 // newline framing, the reconnect backoff timer, the node:crypto adapter, the cross-process seq lock,
 // and the render/exit policy below (a one-shot read/write exits on its reply/ack; `watch` streams

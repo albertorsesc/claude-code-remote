@@ -3,7 +3,7 @@
 // completing pairing with none in progress is rejected
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pairingProof } from '@claudecode/protocol/node';
+import { pairingProof } from '@claude-code-remote/protocol/node';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';

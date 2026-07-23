@@ -1,6 +1,6 @@
-import { OutboundStream, InboundStream } from '@claudecode/protocol';
+import { OutboundStream, InboundStream } from '@claude-code-remote/protocol';
 import { DeviceReplayLog } from './replay.ts';
-import type { ServerEvent } from '@claudecode/protocol';
+import type { ServerEvent } from '@claude-code-remote/protocol';
 
 export interface ResumeResult {
   resume: { events: { seq: number; event: ServerEvent }[] } | null;

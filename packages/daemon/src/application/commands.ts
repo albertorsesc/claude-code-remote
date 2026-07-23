@@ -3,7 +3,7 @@ import type { SessionHandle } from './ports.ts';
 import type { ApprovalBroker } from '../domain/approvals.ts';
 import type { ApprovalHistoryReader, DeviceTrustRegistry, JobEnqueuer, Logger, PushRegistrar } from './ports.ts';
 import { permissionModeIsAllowed, permissionModeRefusal } from '../domain/permissionMode.ts';
-import { assertNever, type ClientCommand, type ServerEvent } from '@claudecode/protocol';
+import { assertNever, type ClientCommand, type ServerEvent } from '@claude-code-remote/protocol';
 
 /** Wires a spawned session's events to broadcasts. Called once per session, from the job queue. */
 export function wire(

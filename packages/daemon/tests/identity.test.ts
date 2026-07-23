@@ -2,7 +2,7 @@
 // (a bare catch here used to rotate the daemon identity on every restart).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pairingProof } from '@claudecode/protocol/node';
+import { pairingProof } from '@claude-code-remote/protocol/node';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

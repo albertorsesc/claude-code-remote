@@ -1,5 +1,5 @@
 {
-  "name": "@claudecode/mobile",
+  "name": "@claude-code-remote/mobile",
   "version": "0.0.0",
   "private": true,
   "main": "index.js",
@@ -38,7 +38,7 @@
     "@noble/ciphers": "2.2.0",
     "@noble/hashes": "2.2.0",
     "zustand": "5.0.14",
-    "@claudecode/protocol": "file:../../packages/protocol"
+    "@claude-code-remote/protocol": "file:../../packages/protocol"
   },
   "devDependencies": {
     "typescript": "~6.0.3",

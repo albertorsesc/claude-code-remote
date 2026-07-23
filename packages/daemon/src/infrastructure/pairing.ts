@@ -4,7 +4,7 @@ import path from 'node:path';
 import {
   generateIdentity, exportPublic, exportPrivate, importPrivate, importPublic,
   deriveSessionKey, constantTimeEqual, pairingProof, type KeyPair,
-} from '@claudecode/protocol/node';
+} from '@claude-code-remote/protocol/node';
 import type { PairingOutcome, PairingService } from '../application/ports.ts';
 
 /**

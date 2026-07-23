@@ -66,6 +66,6 @@ def open_frame(key: bytes, frame: dict, direction: str = 'd2c') -> dict:
 
 
 def pairing_proof(secret: str, device_public_key_b64: str, daemon_public_key_b64: str) -> str:
-    """Matches pairingProof in @claudecode/protocol exactly."""
+    """Matches pairingProof in @claude-code-remote/protocol exactly."""
     mac = hmac.new(secret.encode('utf-8'), (device_public_key_b64 + daemon_public_key_b64).encode('utf-8'), hashlib.sha256)
     return base64.b64encode(mac.digest()).decode()

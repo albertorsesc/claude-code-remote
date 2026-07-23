@@ -5,7 +5,7 @@
 // peer had already rendered.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { open } from '@claudecode/protocol/node';
+import { open } from '@claude-code-remote/protocol/node';
 import { ClientHub } from '../src/interface/clientHub.ts';
 import { DeviceSessionRegistry } from '../src/domain/deviceSessions.ts';
 

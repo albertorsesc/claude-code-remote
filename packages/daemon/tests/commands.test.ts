@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { wire, createCommandHandler } from '../src/application/commands.ts';
-import type { ServerEvent } from '@claudecode/protocol';
+import type { ServerEvent } from '@claude-code-remote/protocol';
 
 /** A push registrar that does nothing, for the tests that don't exercise push. */
 const noopPush = { register: () => {}, unregister: () => {} } as any;

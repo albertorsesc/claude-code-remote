@@ -79,7 +79,7 @@ atexit.register(_cleanup_orphans)
 
 def start_daemon(log_path, self_deny_ms=120000, extra_env=None, store=None):
     """Fresh CC_STORE per call by default: an integration run must not read or pollute the
-    real ~/.config/app.claudecode/daemon.json, and must not inherit paired devices left over
+    real ~/.config/claude-code-remote/daemon.json, and must not inherit paired devices left over
     from a previous test run. Pass `store` explicitly to reuse the same identity across a
     stop_daemon()+start_daemon() cycle, simulates "same identity, restarted process" for the
     daemon-restart guard (a new process's in-memory replay state is empty even though the
@@ -90,7 +90,7 @@ def start_daemon(log_path, self_deny_ms=120000, extra_env=None, store=None):
     # Isolate the durable DB the same way CC_STORE isolates identity, and with the same discipline:
     # fresh-and-isolated BY DEFAULT, persisted only by EXPLICIT opt-in. Each start_daemon() gets its
     # own temp DB unless the caller passes CC_DB_PATH, so an integration run never reads or pollutes
-    # the real ~/.config/app.claudecode/daemon.db, and a fixed-store test cannot accumulate jobs in a
+    # the real ~/.config/claude-code-remote/daemon.db, and a fixed-store test cannot accumulate jobs in a
     # derived DB across runs (which would leak into the resync snapshot now that it reads recent
     # durable jobs). A test that genuinely needs the DB to survive its OWN restart (e.g.
     # orphan_recovery) declares that intent by passing CC_DB_PATH, exactly as it passes store= to

@@ -1,6 +1,6 @@
 import type net from 'node:net';
-import { seal } from '@claudecode/protocol/node';
-import type { ServerEvent } from '@claudecode/protocol';
+import { seal } from '@claude-code-remote/protocol/node';
+import type { ServerEvent } from '@claude-code-remote/protocol';
 import type { DeviceSessionRegistry } from '../domain/deviceSessions.ts';
 import type { Logger } from '../application/ports.ts';
 

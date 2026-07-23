@@ -1,4 +1,4 @@
-import { neutralizeControlChars } from '@claudecode/protocol';
+import { neutralizeControlChars } from '@claude-code-remote/protocol';
 import type { Logger } from '../application/ports.ts';
 
 /**

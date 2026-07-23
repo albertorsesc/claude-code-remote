@@ -1,4 +1,4 @@
-import type { PermissionMode } from '@claudecode/protocol';
+import type { PermissionMode } from '@claude-code-remote/protocol';
 
 /**
  * Which `--permission-mode` values the daemon will actually apply to a session.

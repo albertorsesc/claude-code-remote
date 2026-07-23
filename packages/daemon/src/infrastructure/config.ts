@@ -104,8 +104,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   return {
     hookSock: env.CC_DAEMON_SOCK || '/tmp/cc-daemon.sock',
     clientSock: env.CC_CLIENT_SOCK || '/tmp/cc-client.sock',
-    storePath: env.CC_STORE || path.join(os.homedir(), '.config', 'app.claudecode', 'daemon.json'),
-    dbPath: env.CC_DB_PATH || path.join(os.homedir(), '.config', 'app.claudecode', 'daemon.db'),
+    storePath: env.CC_STORE || path.join(os.homedir(), '.config', 'claude-code-remote', 'daemon.json'),
+    dbPath: env.CC_DB_PATH || path.join(os.homedir(), '.config', 'claude-code-remote', 'daemon.db'),
     clientTcpPort,
     clientTcpHost: env.CC_CLIENT_TCP_HOST || 'auto',
     selfDenyMs: positiveInt(env, 'CC_HOOK_SELF_DENY_MS', 20 * 60 * 1000),

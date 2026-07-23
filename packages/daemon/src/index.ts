@@ -33,7 +33,7 @@ import { ClientHub } from './interface/clientHub.ts';
 import { createHookServer } from './interface/hookBridge.ts';
 import { createClientConnectionHandler } from './interface/clientConnection.ts';
 
-import type { PendingApproval, ServerEvent } from '@claudecode/protocol';
+import type { PendingApproval, ServerEvent } from '@claude-code-remote/protocol';
 
 // --- configuration ---------------------------------------------------------------------------
 

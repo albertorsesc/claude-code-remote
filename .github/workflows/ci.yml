@@ -14,6 +14,6 @@ jobs:
         with:
           node-version: '24' # required: strip-only TypeScript, node:sqlite, x25519 in node:crypto
           cache: 'npm'
-      - run: npm ci # also creates the @claudecode/* workspace links
+      - run: npm ci # also creates the @claude-code-remote/* workspace links
       - run: npm run typecheck # tsc --noEmit: the load-bearing type gate (Node strips types unchecked)
       - run: npm test # node --test: unit tests per package + the meta tests

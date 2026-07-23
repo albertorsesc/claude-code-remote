@@ -1,4 +1,4 @@
-import type { PushPlatform } from '@claudecode/protocol';
+import type { PushPlatform } from '@claude-code-remote/protocol';
 import type { Logger, PushRegistrar, PushRegistrationStore, PushSender } from './ports.ts';
 
 /**

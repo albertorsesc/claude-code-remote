@@ -1,5 +1,5 @@
 import net from 'node:net';
-import type { PendingApproval, ServerEvent, SessionInfo } from '@claudecode/protocol';
+import type { PendingApproval, ServerEvent, SessionInfo } from '@claude-code-remote/protocol';
 import type { ApprovalBroker } from '../domain/approvals.ts';
 import type { Logger } from '../application/ports.ts';
 import { guardMessage } from './messageGuard.ts';

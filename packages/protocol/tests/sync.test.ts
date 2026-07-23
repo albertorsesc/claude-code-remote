@@ -8,7 +8,7 @@
 // DeviceReplayLog (packages/daemon/src/domain/replay.ts, plaintext and seq-addressed).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OutboundStream, InboundStream } from '@claudecode/protocol';
+import { OutboundStream, InboundStream } from '@claude-code-remote/protocol';
 
 test('inbound dedup drops replays, including out-of-order', () => {
   const inb = new InboundStream();

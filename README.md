@@ -85,7 +85,7 @@ npm install
 ```
 
 `npm install` is not a build. It only creates the `node_modules` symlinks that let the packages
-import each other by name (`@claudecode/protocol`). Skip it and both the daemon and the tests fail
+import each other by name (`@claude-code-remote/protocol`). Skip it and both the daemon and the tests fail
 with `ERR_MODULE_NOT_FOUND`.
 
 For the rest of this guide, alias the CLI so the commands read cleanly:
@@ -124,7 +124,7 @@ node packages/daemon/src/index.ts
 ```
 
 It listens on a local Unix socket (`/tmp/cc-client.sock`) and writes its state to
-`~/.config/app.claudecode/` (`daemon.db`, `daemon.json`). Leave it running.
+`~/.config/claude-code-remote/` (`daemon.db`, `daemon.json`). Leave it running.
 
 ### 4. Pair this machine (one time)
 
@@ -134,7 +134,7 @@ In a second terminal:
 cc pair
 ```
 
-Pairing bootstraps over the local socket and persists to `~/.config/app.claudecode/device.json`.
+Pairing bootstraps over the local socket and persists to `~/.config/claude-code-remote/device.json`.
 
 ### 5. Drive it
 

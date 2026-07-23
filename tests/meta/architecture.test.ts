@@ -54,13 +54,13 @@ function importsOf(file: string): string[] {
 
 /**
  * Does an import specifier reference a given workspace package? Catches the bare package root
- * (`@claudecode/cli`, the idiomatic and side-effectful form), a subpath (`@claudecode/cli/...`), and
+ * (`@claude-code-remote/cli`, the idiomatic and side-effectful form), a subpath (`@claude-code-remote/cli/...`), and
  * a relative cross-package path (`.../cli/...`), but NOT a substring collision like `clientHub`
  * (which contains "cli"). Precision matters: a `cli/`-only check misses the bare root, and a bare
  * `cli` check false-flags every `client*` module.
  */
 function referencesPackage(spec: string, pkg: string): boolean {
-  return spec === `@claudecode/${pkg}` || spec.startsWith(`@claudecode/${pkg}/`) || spec.includes(`/${pkg}/`);
+  return spec === `@claude-code-remote/${pkg}` || spec.startsWith(`@claude-code-remote/${pkg}/`) || spec.includes(`/${pkg}/`);
 }
 
 test('protocol is a pure kernel: imports only node: builtins and its own files', () => {
@@ -99,7 +99,7 @@ test('the cli imports protocol, not the daemon (allowlist shrinks to empty as mi
   const offenders: string[] = [];
   for (const f of filesIn('packages/cli/src')) {
     for (const spec of importsOf(f)) {
-      // Catches a BARE `@claudecode/daemon` too: daemon's package.json `main` points at the
+      // Catches a BARE `@claude-code-remote/daemon` too: daemon's package.json `main` points at the
       // composition root, which opens sockets and starts listeners on import, so a stray bare-root
       // import would boot a daemon as a side effect AND still ship green under a `daemon/`-only check.
       if (referencesPackage(spec, 'daemon') && !CLI_TO_DAEMON_ALLOWLIST.has(spec)) {
@@ -107,7 +107,7 @@ test('the cli imports protocol, not the daemon (allowlist shrinks to empty as mi
       }
     }
   }
-  assert.deepEqual(offenders, [], 'cli must depend only on @claudecode/protocol');
+  assert.deepEqual(offenders, [], 'cli must depend only on @claude-code-remote/protocol');
 });
 
 // --- daemon-internal layering -------------------------------------------------------------

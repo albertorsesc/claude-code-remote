@@ -1,4 +1,4 @@
-// Proves the RN crypto module is BYTE-COMPATIBLE with the daemon (`@claudecode/protocol/node`),
+// Proves the RN crypto module is BYTE-COMPATIBLE with the daemon (`@claude-code-remote/protocol/node`),
 // using FIXED VECTORS generated once from the node implementation. Because the vectors are fixed
 // strings, this test needs no node:crypto and runs
 // in the React Native environment (and in Node), the whole point of the crypto seam.

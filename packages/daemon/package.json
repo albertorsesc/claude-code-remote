@@ -1,5 +1,5 @@
 {
-  "name": "@claudecode/daemon",
+  "name": "@claude-code-remote/daemon",
   "version": "0.1.0",
   "private": true,
   "description": "The daemon that owns headless Claude Code sessions and gates their tool calls through remote approval.",
@@ -15,6 +15,6 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@claudecode/protocol": "*"
+    "@claude-code-remote/protocol": "*"
   }
 }

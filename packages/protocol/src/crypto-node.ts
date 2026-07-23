@@ -9,14 +9,14 @@ import { frameAADString, type Direction, type SealedFrame } from './frame.ts';
  * The `node:crypto` IMPLEMENTATION of the protocol's E2E crypto: X25519 ECDH -> HKDF-SHA256 ->
  * AES-256-GCM, plus X25519 key management. Node built-ins only; zero dependencies.
  *
- * Reachable via the `@claudecode/protocol/node` subpath, NOT the base `@claudecode/protocol`, the
+ * Reachable via the `@claude-code-remote/protocol/node` subpath, NOT the base `@claude-code-remote/protocol`, the
  * base export is kept free of `node:crypto` so React Native can import the wire contract (frame.ts,
  * types) without pulling a Node built-in into its bundle. The daemon and CLI import from here; the
  * RN app supplies its own byte-compatible implementation of the same operations (verified pure-JS
  * @noble interop) against the shared frame.ts contract.
  */
 
-// Re-exported so `@claudecode/protocol/node` is the complete crypto surface (frame contract + the
+// Re-exported so `@claude-code-remote/protocol/node` is the complete crypto surface (frame contract + the
 // node implementation + the pairing proof), matching how the daemon/CLI consumed it before the split.
 export * from './frame.ts';
 export * from './pairing-proof.ts';
@@ -46,6 +46,11 @@ export function importPrivate(b64: string): KeyObject {
 /**
  * Derive the shared session key. `salt` must be fresh per session (both sides contribute)
  * so a compromised long-term key cannot decrypt recorded past sessions.
+ *
+ * `info` is a frozen on-wire protocol version tag, NOT a product name, so it deliberately keeps its
+ * original value across project renames. It is bound into every derived key and must stay byte-
+ * identical across the daemon, the RN app (frameCrypto.ts), and the Python test crypto (_crypto.py);
+ * changing it would alter every session key (a breaking wire change) and invalidate the fixed vectors.
  */
 export function deriveSessionKey(
   privateKey: KeyObject,

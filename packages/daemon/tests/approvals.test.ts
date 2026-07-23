@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApprovalBroker } from '../src/domain/approvals.ts';
-import type { PendingApproval } from '@claudecode/protocol';
+import type { PendingApproval } from '@claude-code-remote/protocol';
 
 function pending(toolUseId: string): PendingApproval {
   return { toolUseId, sessionId: 's', toolName: 'Bash', toolInput: {}, requestedAt: 0, deadlineAt: 0 };

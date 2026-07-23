@@ -1,15 +1,15 @@
 /**
  * React Native implementation of the protocol's E2E crypto: X25519 ECDH -> HKDF-SHA256 ->
- * AES-256-GCM, pure-JS via @noble, byte-compatible with the daemon's `@claudecode/protocol/node`.
+ * AES-256-GCM, pure-JS via @noble, byte-compatible with the daemon's `@claude-code-remote/protocol/node`.
  *
- * Imports ONLY the base `@claudecode/protocol` (the portable wire contract), NEVER
- * `@claudecode/protocol/node`, which pulls `node:crypto` and would break the Metro bundle. The AAD
+ * Imports ONLY the base `@claude-code-remote/protocol` (the portable wire contract), NEVER
+ * `@claude-code-remote/protocol/node`, which pulls `node:crypto` and would break the Metro bundle. The AAD
  * format is taken from `frameAADString` there, so the direction:seq binding has one source of truth.
  *
  * Requires the `react-native-get-random-values` polyfill imported at app entry (index.js), before
  * any call here: @noble reads `globalThis.crypto.getRandomValues`.
  *
- * Verified byte-for-byte against `@claudecode/protocol/node` (session keys, sealed frames in both
+ * Verified byte-for-byte against `@claude-code-remote/protocol/node` (session keys, sealed frames in both
  * directions, direction-binding rejection, pairing proof), see frameCrypto.test.ts.
  */
 import { x25519 } from '@noble/curves/ed25519.js';
@@ -18,7 +18,7 @@ import { randomBytes, utf8ToBytes, bytesToUtf8 } from '@noble/ciphers/utils.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { frameAADString, type Direction, type SealedFrame } from '@claudecode/protocol';
+import { frameAADString, type Direction, type SealedFrame } from '@claude-code-remote/protocol';
 
 const INFO = utf8ToBytes('app.claudecode/v1');
 

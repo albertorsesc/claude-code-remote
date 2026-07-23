@@ -1,4 +1,4 @@
-import type { SessionState } from '@claudecode/protocol';
+import type { SessionState } from '@claude-code-remote/protocol';
 
 /**
  * Map one Claude stream-json event to the session state it implies, or null if the event does not
