@@ -15,5 +15,6 @@ export * from './frame.ts';
 export * from './sync.ts';
 export * from './resend.ts';
 export * from './client.ts';
+export * from './pairCode.ts';
 export * from './sanitize.ts';
 export * from './assert.ts';

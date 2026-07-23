@@ -54,7 +54,7 @@ const files = [
 // These are the real current counts, asserted as minimums: adding modules never breaks this,
 // but losing a directory (or a whole package's tests) does, loudly, naming what went missing.
 const MIN_DISCOVERED: Record<string, number> = {
-  'packages/protocol/src': 10,
+  'packages/protocol/src': 11,
   'packages/daemon/src': 23,
   'packages/cli/src': 4,
   'packages/protocol/tests': 7,
