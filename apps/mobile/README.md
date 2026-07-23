@@ -53,5 +53,6 @@ Push-on-approval is already wired on the daemon: register this device's Expo tok
 pending (generic ping only, fetch the real approval over the E2E channel). Enable it on the daemon
 with `CC_PUSH_ENABLED=1`.
 
-Remaining: pairing → fleet → steer → approval+push screens; and the one daemon addition still open,
-rendering the pairing payload as a scannable QR (today it is the text `cc pair-code`).
+The daemon side of QR pairing is done too: `cc pair-qr` renders the pairing payload as a scannable QR
+(the app decodes it exactly like a pasted `CC_PAIR_CODE`). Remaining is the app itself: pairing (QR
+scan) → fleet → steer → approval+push screens.

@@ -56,10 +56,10 @@ const files = [
 const MIN_DISCOVERED: Record<string, number> = {
   'packages/protocol/src': 10,
   'packages/daemon/src': 23,
-  'packages/cli/src': 3,
+  'packages/cli/src': 4,
   'packages/protocol/tests': 7,
   'packages/daemon/tests': 17,
-  'packages/cli/tests': 2,
+  'packages/cli/tests': 3,
   'tests/meta': 2,
 };
 

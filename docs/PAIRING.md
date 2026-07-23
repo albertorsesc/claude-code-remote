@@ -68,10 +68,18 @@ reply. The secret never crosses the network.
 
 ## Pairing a phone
 
-The phone flow is the same shape as the second-machine flow, with the QR as the out-of-band channel:
-the daemon displays a QR, the phone camera reads it (genuinely out of band), and `complete_pair`,
-`hello`, and every command run over the tailnet. The QR rendering on the daemon side is the one piece
-of this flow still to be built.
+The phone flow is the same shape as the second-machine flow, with a QR as the out-of-band channel.
+On the daemon machine:
+
+```bash
+cc pair-qr
+```
+
+This runs a local `begin_pair` and renders the pairing payload as a scannable QR in the terminal (the
+QR encodes the same base64url code that `cc pair-code` prints). The phone camera reads it, genuinely
+out of band, and `complete_pair`, `hello`, and every command run over the tailnet. The code is also
+printed as a fallback, so the same output works whether you scan it with a phone or paste it into
+`CC_PAIR_CODE=<code> cc pair` on another machine.
 
 ## Revoking a device
 

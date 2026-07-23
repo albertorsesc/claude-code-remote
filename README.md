@@ -197,9 +197,8 @@ CC_CLIENT_TCP_PORT=7443 node packages/daemon/src/index.ts
 
 Pairing always bootstraps locally (a security boundary, explained in
 [docs/PAIRING.md](docs/PAIRING.md)); the one-time secret leaves the daemon machine out of band (a QR
-for a phone, a copy-pasteable code for a second machine) and never over the network. The full pairing
-and remote-access flow, including `cc pair-code` for a second machine, is in
-[docs/PAIRING.md](docs/PAIRING.md).
+for a phone via `cc pair-qr`, a copy-pasteable code for a second machine via `cc pair-code`) and never
+over the network. The full pairing and remote-access flow is in [docs/PAIRING.md](docs/PAIRING.md).
 
 ## Security model
 

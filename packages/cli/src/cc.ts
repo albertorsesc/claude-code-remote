@@ -4,6 +4,7 @@
 //
 //   cc pair                         pair this (local) device with the daemon (do this first)
 //   cc pair-code                    on the daemon machine: mint an out-of-band code for a SECOND machine
+//   cc pair-qr                      on the daemon machine: show a scannable QR of that code, for a phone
 //   CC_PAIR_CODE=<code> cc pair     on the second machine: redeem that code, pairing over the network
 //   cc watch                        stream fleet + approvals
 //   cc history [limit]              print the durable approval decision history
@@ -28,6 +29,7 @@ import {
 } from '@claude-code-remote/protocol/node';
 import { type DeviceRecord, loadDevice, saveDevice, reserveOutSeq } from './deviceStore.ts';
 import { encodePairCode, decodePairCode, tcpTargetFromAddr, type PairPayload } from './pairing.ts';
+import { encode as encodeQr, renderToTerminal } from './qr.ts';
 
 const SOCK = process.env.CC_CLIENT_SOCK || '/tmp/cc-client.sock';
 const DEVICE_STORE = process.env.CC_DEVICE_STORE ||
@@ -113,18 +115,18 @@ function runPair() {
 }
 
 /**
- * On the DAEMON machine: run `begin_pair` on the local socket and print the resulting QR payload as
- * a single out-of-band code, without completing. The operator carries the code to a second machine.
- * This is the CLI's equivalent of showing a QR on screen, the secret leaves this machine by hand,
- * never over the network, so it does not reopen the self-service hole.
+ * On the DAEMON machine: run `begin_pair` on the LOCAL socket and hand the resulting one-time payload
+ * to `render`, without completing pairing. Shared by `pair-code` (prints a code for a second machine)
+ * and `pair-qr` (prints a QR for a phone). Both mint the secret here and carry it out of band; it
+ * never leaves over the network, so neither reopens the self-service hole.
  */
-function runPairCode() {
-  // begin_pair is local-only by design, so always use the local Unix socket here, never TCP, even
-  // if CC_CLIENT_TCP_ADDR is set in this shell.
+function beginPairLocal(render: (info: { qr: any; code: string; target: string | null }) => void) {
+  // begin_pair is local-only by design, so always use the local Unix socket here, never TCP, even if
+  // CC_CLIENT_TCP_ADDR is set in this shell.
   const sock = net.createConnection(SOCK);
   sock.on('error', (e: any) => {
     console.error(`cannot reach the local daemon at ${SOCK}: ${e.code ?? e.message}. ` +
-      `Run \`cc pair-code\` on the machine running the daemon.`);
+      `Run this on the machine running the daemon.`);
     process.exit(1);
   });
 
@@ -141,23 +143,42 @@ function runPairCode() {
 
       if (msg.type === 'pair_qr') {
         const qr = JSON.parse(msg.qr);
-        const code = encodePairCode(msg.qr);
-        const target = tcpTargetFromAddr(qr.addr);
-        console.log('\nPairing code (one use, valid ~3 minutes):\n');
-        console.log(`  ${code}\n`);
-        if (target) {
-          console.log('On the SECOND machine, run:\n');
-          console.log(`  CC_PAIR_CODE='${code}' cc pair\n`);
-          console.log(`Then reach the daemon from there with:  CC_CLIENT_TCP_ADDR=${target} cc <command>\n`);
-        } else {
-          console.error(`WARNING: the daemon advertises ${qr.addr}, not a tcp:// address, so a second ` +
-            `machine cannot reach it. Set CC_CLIENT_TCP_PORT on the daemon to enable remote pairing.`);
-        }
+        render({ qr, code: encodePairCode(msg.qr), target: tcpTargetFromAddr(qr.addr) });
         process.exit(0);
       } else if (msg.type === 'pair_failed') {
-        console.error('the daemon refused begin_pair (it is local-only, run `cc pair-code` on the daemon machine)');
+        console.error('the daemon refused begin_pair (it is local-only, run this on the daemon machine)');
         process.exit(1);
       }
+    }
+  });
+}
+
+/** Print the pairing payload as a copy-pasteable code for a SECOND machine (`CC_PAIR_CODE=<code> cc pair`). */
+function runPairCode() {
+  beginPairLocal(({ qr, code, target }) => {
+    console.log('\nPairing code (one use, valid ~3 minutes):\n');
+    console.log(`  ${code}\n`);
+    if (target) {
+      console.log('On the SECOND machine, run:\n');
+      console.log(`  CC_PAIR_CODE='${code}' cc pair\n`);
+      console.log(`Then reach the daemon from there with:  CC_CLIENT_TCP_ADDR=${target} cc <command>\n`);
+    } else {
+      console.error(`WARNING: the daemon advertises ${qr.addr}, not a tcp:// address, so a second ` +
+        `machine cannot reach it. Set CC_CLIENT_TCP_PORT on the daemon to enable remote pairing.`);
+    }
+  });
+}
+
+/** Render the pairing payload as a scannable QR for a phone. Encodes the same base64url `code` that
+ *  `pair-code` prints, so the app decodes it exactly like a pasted `CC_PAIR_CODE`. */
+function runPairQr() {
+  beginPairLocal(({ qr, code, target }) => {
+    console.log('\nScan this with the app to pair (one use, valid ~3 minutes):\n');
+    console.log(renderToTerminal(encodeQr(code)));
+    console.log(`\nOr redeem it on another machine with:  CC_PAIR_CODE='${code}' cc pair\n`);
+    if (!target) {
+      console.error(`WARNING: the daemon advertises ${qr.addr}, not a tcp:// address, so a phone ` +
+        `cannot reach it. Set CC_CLIENT_TCP_PORT on the daemon to enable remote pairing.`);
     }
   });
 }
@@ -217,6 +238,8 @@ function runPairFromCode() {
 
 if (cmd === 'pair-code') {
   runPairCode();
+} else if (cmd === 'pair-qr') {
+  runPairQr();
 } else if (cmd === 'pair') {
   // Same command, two flows: with an out-of-band code this is the SECOND machine redeeming it over
   // the network; without one it is the local machine bootstrapping trust on the daemon's own socket.
