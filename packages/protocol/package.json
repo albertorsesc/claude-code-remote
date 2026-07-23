@@ -1,0 +1,20 @@
+{
+  "name": "@claudecode/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable wire-protocol kernel shared by the daemon and its clients: sealed-frame format, reliability state machine, and shared types. No node:crypto in the base entry, so it is importable in React Native.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertorsesc/claude-code-remote.git",
+    "directory": "packages/protocol"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/crypto-node.ts"
+  }
+}

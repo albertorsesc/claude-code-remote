@@ -1,0 +1,22 @@
+{
+  "//": [
+    "Type checking only — this project runs .ts directly under Node's strip-only mode and has NO",
+    "build step, so `noEmit` is not an optimization, it is the entire point. typescript and",
+    "@types/node are devDependencies; the shipped runtime dependency count stays zero.",
+    "",
+    "Before this existed, types were stripped and never verified: every annotation in the codebase",
+    "was a comment. It immediately caught a real variance bug in the daemon's own ports and four",
+    "possible-null dereferences in the CLI."
+  ],
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["packages/**/*.ts", "tests/**/*.ts"]
+}

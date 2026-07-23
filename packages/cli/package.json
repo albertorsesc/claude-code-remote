@@ -1,0 +1,20 @@
+{
+  "name": "@claudecode/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reference command-line client (cc): pair, watch, spawn, steer, and approve headless Claude Code sessions.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertorsesc/claude-code-remote.git",
+    "directory": "packages/cli"
+  },
+  "type": "module",
+  "bin": { "cc": "./src/cc.ts" },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@claudecode/protocol": "*"
+  }
+}

@@ -1,0 +1,22 @@
+# Dependencies (all levels, including apps/mobile/node_modules)
+node_modules/
+
+# Local research, working notes, and audit tooling. Never published.
+.scratch/
+storage/
+
+# Local machine config and scratch playground (contains absolute/personal paths)
+.claude/settings.local.json
+testbed/
+
+# Expo / React Native generated native projects and build output (apps/mobile)
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.expo/
+apps/mobile/expo-env.d.ts
+apps/mobile/dist/
+apps/mobile/web-build/
+
+# OS, editor, logs
+.DS_Store
+*.log

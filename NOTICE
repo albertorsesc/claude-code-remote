@@ -1,0 +1,14 @@
+claude-code-remote
+Copyright 2026 Alberto Rosas and the claude-code-remote authors
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this project except in compliance with the License. You may obtain a copy of the
+License in the LICENSE file in this repository, or at
+http://www.apache.org/licenses/LICENSE-2.0.
+
+--
+
+This project is not affiliated with, endorsed by, or sponsored by Anthropic.
+"Claude" and "Claude Code" are trademarks of Anthropic, PBC. This project uses
+those names only nominatively, to describe that it interoperates with Claude
+Code. It is an independent, community-built tool.

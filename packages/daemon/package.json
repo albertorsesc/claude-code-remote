@@ -1,0 +1,20 @@
+{
+  "name": "@claudecode/daemon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The daemon that owns headless Claude Code sessions and gates their tool calls through remote approval.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertorsesc/claude-code-remote.git",
+    "directory": "packages/daemon"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@claudecode/protocol": "*"
+  }
+}
