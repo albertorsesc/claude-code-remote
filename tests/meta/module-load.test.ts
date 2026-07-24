@@ -55,7 +55,7 @@ const files = [
 // but losing a directory (or a whole package's tests) does, loudly, naming what went missing.
 const MIN_DISCOVERED: Record<string, number> = {
   'packages/protocol/src': 11,
-  'packages/daemon/src': 23,
+  'packages/daemon/src': 24,
   'packages/cli/src': 4,
   'packages/protocol/tests': 7,
   'packages/daemon/tests': 17,

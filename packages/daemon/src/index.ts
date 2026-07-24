@@ -32,6 +32,7 @@ import { createPushService } from './application/pushService.ts';
 import { ClientHub } from './interface/clientHub.ts';
 import { createHookServer } from './interface/hookBridge.ts';
 import { createClientConnectionHandler } from './interface/clientConnection.ts';
+import { createWebSocketServer } from './interface/wsServer.ts';
 
 import type { PendingApproval, ServerEvent } from '@claude-code-remote/protocol';
 
@@ -164,8 +165,9 @@ const connectionHandler = (allowPairingBootstrap: boolean) => createClientConnec
 
 // Local socket: reaching it already implies local access, so pairing may start here.
 const clientServer = net.createServer(connectionHandler(true));
-// Network listener: reachable by anything on the tailnet, so it may USE existing trust
-// (hello + sealed commands) but may never mint it.
+// Network listeners (TCP for the CLI, WebSocket for an Expo Go phone): reachable by anything on the
+// tailnet, so they may USE existing trust (hello + sealed commands) but may never mint it. Both carry
+// the identical protocol; the WebSocket one is a thin transport bridge over the same handler.
 const clientTcpServer = config.clientTcpPort ? net.createServer(connectionHandler(false)) : null;
 
 broker.on('pending', (a: PendingApproval) => {
@@ -203,15 +205,29 @@ for (const p of [config.hookSock, config.clientSock]) {
 hookServer.listen(config.hookSock, () => log(`hook bridge listening on ${config.hookSock}`));
 clientServer.listen(config.clientSock, () => log(`client API listening on ${config.clientSock}`));
 
-if (clientTcpServer && config.clientTcpPort) {
+// Resolve the tailnet host once and start whichever network listeners are configured. The advertised
+// address (what a paired client is told to dial) prefers WebSocket when it is enabled, since that is
+// the phone's transport and the QR is scanned by the phone; a CLI second machine is given the tcp://
+// address explicitly via `cc pair-code` when only TCP is on.
+if ((clientTcpServer && config.clientTcpPort) || config.clientWsPort) {
   const host = resolveTcpHost(config.clientTcpHost, config.clientSock, log);
   if (host) {
-    clientTcpServer.on('error', (err) => log(`client TCP listener error: ${err.message}`));
-    clientTcpServer.listen(config.clientTcpPort, host, () => {
-      advertisedAddress = `tcp://${host}:${config.clientTcpPort}`;
-      log(`client API also listening on ${host}:${config.clientTcpPort}, set ` +
-          `CC_CLIENT_TCP_ADDR=${host}:${config.clientTcpPort} on the other machine to reach it`);
-    });
+    if (clientTcpServer && config.clientTcpPort) {
+      clientTcpServer.on('error', (err) => log(`client TCP listener error: ${err.message}`));
+      clientTcpServer.listen(config.clientTcpPort, host, () => {
+        if (!config.clientWsPort) advertisedAddress = `tcp://${host}:${config.clientTcpPort}`;
+        log(`client API also listening on ${host}:${config.clientTcpPort} (tcp), set ` +
+            `CC_CLIENT_TCP_ADDR=${host}:${config.clientTcpPort} on the other machine to reach it`);
+      });
+    }
+    if (config.clientWsPort) {
+      const ws = createWebSocketServer({ host, port: config.clientWsPort, onConnection: connectionHandler(false), log });
+      ws.on('listening', () => {
+        advertisedAddress = `ws://${host}:${config.clientWsPort}`;
+        log(`client WebSocket API listening on ws://${host}:${config.clientWsPort}, scan the QR from ` +
+            '`cc pair-qr` on this machine to pair a phone');
+      });
+    }
   }
 }
 

@@ -1,58 +1,67 @@
 # @claude-code-remote/mobile
 
-React Native (Expo) client for the daemon, pairs by scanning a QR, watches the session fleet,
-steers sessions, and answers tool-approval prompts pushed to the phone, all over an E2E-encrypted
-raw-TCP connection on a Tailscale tailnet.
+Expo (React Native) client for the daemon: pair by scanning a QR, watch the session fleet, steer
+sessions, and answer tool-approval prompts, over an end-to-end-encrypted WebSocket on a Tailscale
+tailnet.
 
 ## State (honest)
 
-- **Verified and built:** the on-device crypto (`src/core/crypto/frameCrypto.ts`), pure-JS `@noble`,
-  proven **byte-for-byte compatible** with the daemon's `@claude-code-remote/protocol/node` via fixed vectors
-  (`src/core/crypto/frameCrypto.test.ts`, runs with zero `node:crypto`). It imports only the base
-  `@claude-code-remote/protocol` (the portable wire contract), never `/node`.
-- **Scaffolded, not yet built:** everything else. This package has the verified dependency manifest
-  and Expo config, but no screens/transport/state yet, and the Expo app has **not** been built or run
-  here (needs a machine with Xcode / Android SDK / EAS).
+The entire client protocol layer is built and verified; only the screens remain.
+
+- **Built and verified** (20 unit tests plus an end-to-end run against a real daemon over a real
+  WebSocket):
+  - `src/core/crypto/frameCrypto.ts`, the on-device crypto (pure-JS `@noble`), byte-for-byte
+    compatible with the daemon's `@claude-code-remote/protocol/node`.
+  - `src/core/protocol/sessionCrypto.ts`, adapts that crypto to the shared `ReliableClient`.
+  - `src/core/protocol/clientController.ts`, the RN host for `ReliableClient` (framing, drain/write).
+  - `src/core/transport.ts`, the WebSocket transport (global `WebSocket`, so it runs in Expo Go).
+  - `src/core/protocol/pairing.ts`, decode a scanned code, build `complete_pair`, persist the record.
+  - `src/core/state/fleetState.ts`, the pure reducer the screens render (sessions, approvals, jobs).
+- **Not built yet:** the UI screens and the native glue that only runs on a device (the `expo-camera`
+  QR scan, `expo-secure-store` persistence, `expo-notifications` registration). The app has not been
+  built or run here; that needs a machine with the Expo toolchain.
+
+## Transport: WebSocket, so it runs in Expo Go
+
+The app reaches the daemon over a WebSocket (the daemon exposes one via `CC_CLIENT_WS_PORT`). This
+uses the global `WebSocket`, present in Expo Go, so there is no native transport module and no dev
+client is needed for the core flow. Each WebSocket message carries one sealed frame; the crypto,
+reliability, and pairing are identical to the CLI's.
+
+One caveat: remote push registration (`expo-notifications`, `getExpoPushTokenAsync`) requires a
+development build on recent Expo SDKs, so the push wake-up feature specifically needs a dev build even
+though everything else runs in Expo Go.
 
 ## Dependency versions
 
-Pinned to **Expo SDK 57** (`expo` 57.0.8, RN 0.86, React 19.2.3), verified against the npm registry
-and the SDK 57 bundle. Third-party (not SDK-pinned): `react-native-tcp-socket@6.4.1`, `@noble/*@2.2.0`,
-`zustand@5.0.14`. Change SDK-pinned versions only through `npx expo install`.
+Pinned to **Expo SDK 57** (`expo` 57.0.8, RN 0.86, React 19.2.3), verified against the npm registry.
+Third-party (not SDK-pinned): `@noble/*@2.2.0`, `zustand@5.0.14`. Change SDK-pinned versions only
+through `npx expo install`.
 
-## Build it (on a dev machine with native toolchains)
+## Run it
 
 ```bash
-# from the monorepo root, apps/* is already a workspace
+# from the monorepo root
 cd apps/mobile
-npx expo install                      # installs the SDK-pinned native deps
-npm install                           # third-party + workspace link
-npx expo prebuild                     # generates native projects (react-native-tcp-socket is native)
-npx expo run:ios                      # or eas build --profile development   (NOT Expo Go)
+npm install          # third-party + workspace link to @claude-code-remote/protocol
+npx expo start       # then open in Expo Go (or a dev build if you want push)
 ```
 
-## Decisions already made (verified by spikes)
+On the daemon machine, enable the WebSocket listener and show a pairing QR:
 
-- **Transport:** `react-native-tcp-socket` (raw TCP, no config plugin, autolinks). Requires a **dev
-  client**, not Expo Go.
-- **Crypto:** pure-JS `@noble` + `react-native-get-random-values` (imported first in `index.js`).
-- **Pairing key:** `expo-secure-store`. **QR:** `expo-camera` `CameraView` barcode scanning.
-  **Push:** `expo-notifications` (deep-links to `/approval/[id]`).
-- **iOS gotcha:** Tailscale IPs are in the CGNAT range, so a raw socket triggers the iOS Local Network
-  prompt, `NSLocalNetworkUsageDescription` is set in `app.json`. Verify on a real device.
+```bash
+CC_CLIENT_WS_PORT=7443 node packages/daemon/src/index.ts   # (plus CC_CLIENT_TCP_PORT if you also want the CLI)
+node packages/cli/src/cc.ts pair-qr                        # scan this in the app
+```
+
+## iOS gotcha
+
+Tailscale IPs are in the CGNAT range, so connecting to one triggers the iOS Local Network prompt.
+`NSLocalNetworkUsageDescription` is set in `app.json`. Verify on a real device.
 
 ## Next
 
-The shared reliability state machine is already extracted: import `ReliableClient` from
-`@claude-code-remote/protocol` (base, RN-safe) and drive it with this app's transport (react-native-tcp-socket),
-the `frameCrypto.ts` `SessionCrypto` adapter, and an in-memory seq counter, the CLI's `cc.ts` is the
-reference host to mirror.
-
-Push-on-approval is already wired on the daemon: register this device's Expo token with a sealed
-`register_push` command (via `ReliableClient.send`), and the daemon wakes it when an approval goes
-pending (generic ping only, fetch the real approval over the E2E channel). Enable it on the daemon
-with `CC_PUSH_ENABLED=1`.
-
-The daemon side of QR pairing is done too: `cc pair-qr` renders the pairing payload as a scannable QR
-(the app decodes it exactly like a pasted `CC_PAIR_CODE`). Remaining is the app itself: pairing (QR
-scan) → fleet → steer → approval+push screens.
+Build the screens on top of the verified client layer: pairing (QR scan via `expo-camera` →
+`decodePairCode` → `startPairing` → connect via `openWebSocket` → persist with `expo-secure-store`),
+then fleet, session detail, and the approval screen. The state they render is already in
+`fleetState.ts`; connecting a socket is `openWebSocket` from `src/core/transport.ts`.

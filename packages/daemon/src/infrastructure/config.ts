@@ -30,6 +30,9 @@ export interface DaemonConfig {
   dbPath: string;
   /** null = do not expose over TCP at all (Unix socket only). */
   clientTcpPort: number | null;
+  /** null = no WebSocket listener. When set, an Expo-Go phone (WebSocket only) can reach the daemon;
+   *  it binds the same host as the TCP listener and carries the identical sealed frames. */
+  clientWsPort: number | null;
   clientTcpHost: string;
   selfDenyMs: number;
   /** Infinity = unbounded, which is the default and today's historical behavior. */
@@ -90,23 +93,25 @@ function optionalPositiveInt(env: Record<string, string | undefined>, name: stri
   return n;
 }
 
-export function loadConfig(env: Record<string, string | undefined> = process.env): DaemonConfig {
-  const rawPort = env.CC_CLIENT_TCP_PORT;
-  let clientTcpPort: number | null = null;
-  if (rawPort !== undefined && rawPort !== '') {
-    const n = Number(rawPort);
-    if (!Number.isInteger(n) || n < 1 || n > 65535) {
-      throw new ConfigError(`CC_CLIENT_TCP_PORT=${JSON.stringify(rawPort)} is not a valid TCP port (1-65535).`);
-    }
-    clientTcpPort = n;
+/** A TCP port if present and valid (1-65535), null if unset, a refusal if present but invalid. */
+function optionalPort(env: Record<string, string | undefined>, name: string): number | null {
+  const raw = env[name];
+  if (raw === undefined || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    throw new ConfigError(`${name}=${JSON.stringify(raw)} is not a valid TCP port (1-65535).`);
   }
+  return n;
+}
 
+export function loadConfig(env: Record<string, string | undefined> = process.env): DaemonConfig {
   return {
     hookSock: env.CC_DAEMON_SOCK || '/tmp/cc-daemon.sock',
     clientSock: env.CC_CLIENT_SOCK || '/tmp/cc-client.sock',
     storePath: env.CC_STORE || path.join(os.homedir(), '.config', 'claude-code-remote', 'daemon.json'),
     dbPath: env.CC_DB_PATH || path.join(os.homedir(), '.config', 'claude-code-remote', 'daemon.db'),
-    clientTcpPort,
+    clientTcpPort: optionalPort(env, 'CC_CLIENT_TCP_PORT'),
+    clientWsPort: optionalPort(env, 'CC_CLIENT_WS_PORT'),
     clientTcpHost: env.CC_CLIENT_TCP_HOST || 'auto',
     selfDenyMs: positiveInt(env, 'CC_HOOK_SELF_DENY_MS', 20 * 60 * 1000),
     // Unbounded by default; only a value that is present AND valid caps it.

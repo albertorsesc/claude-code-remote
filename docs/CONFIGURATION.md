@@ -14,7 +14,8 @@ Read by `packages/daemon/src/index.ts` (via `infrastructure/config.ts`).
 | `CC_DAEMON_SOCK` | `/tmp/cc-daemon.sock` | The local socket the approval bridge connects to. |
 | `CC_STORE` | `~/.config/claude-code-remote/daemon.json` | Daemon identity and paired-device registry. |
 | `CC_DB_PATH` | `~/.config/claude-code-remote/daemon.db` | Durable SQLite store: approvals, session history, jobs, push registrations. |
-| `CC_CLIENT_TCP_PORT` | unset (no TCP listener) | Port for the tailnet TCP listener. Setting it enables off-machine access. |
+| `CC_CLIENT_TCP_PORT` | unset (no TCP listener) | Port for the tailnet TCP listener (for the CLI). Setting it enables off-machine access. |
+| `CC_CLIENT_WS_PORT` | unset (no WebSocket listener) | Port for the tailnet WebSocket listener, which the phone app uses (Expo Go can only speak WebSocket). Carries the identical sealed frames; binds the same host as the TCP listener. When set, the pairing QR advertises the `ws://` address. |
 | `CC_CLIENT_TCP_HOST` | `auto` | Bind address. `auto` discovers the Tailscale IP. A literal IP overrides it; `0.0.0.0` binds every interface and logs a warning. |
 | `CC_HOOK_SELF_DENY_MS` | `1200000` (20 min) | How long the bridge waits before self-denying. Must stay comfortably below each managed project's settings `timeout`. |
 | `CC_MAX_CONCURRENT_SESSIONS` | unbounded | Cap on concurrently running sessions. Unset means spawns run immediately; setting it enables real queueing. |

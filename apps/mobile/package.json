@@ -4,7 +4,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "expo start --dev-client",
+    "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
@@ -33,7 +33,6 @@
     "expo-image": "~57.0.1",
     "@shopify/flash-list": "2.0.2",
     "react-native-get-random-values": "~1.11.0",
-    "react-native-tcp-socket": "6.4.1",
     "@noble/curves": "2.2.0",
     "@noble/ciphers": "2.2.0",
     "@noble/hashes": "2.2.0",

@@ -8,7 +8,7 @@
  * decoder cannot drift from the daemon's encoder. Only the base64url transport is done here, over the
  * RN base64 (which strips the url-safe alphabet, so `-`/`_` are mapped to `+`/`/` first).
  */
-import { parsePairPayload, tcpTargetFromAddr, type PairPayload, type SessionCrypto } from '@claude-code-remote/protocol';
+import { parsePairPayload, type PairPayload, type SessionCrypto } from '@claude-code-remote/protocol';
 import { bytesToUtf8 } from '@noble/ciphers/utils.js';
 import {
   generateKeyPair, spkiPublicKeyB64, rawPublicKeyFromB64, pairingProof, toBase64, fromBase64,
@@ -24,6 +24,8 @@ export interface DeviceRecord {
   devicePublicKey: string;
   /** The daemon's public key, SPKI DER base64 (taken from the pairing payload). */
   daemonPublicKey: string;
+  /** Where to reach the daemon, `host:port` (from the pairing payload's tcp:// address). */
+  daemonAddress: string;
 }
 
 /** Decode a scanned pairing code (base64url of the daemon's QR payload) into a validated payload. */
@@ -32,8 +34,17 @@ export function decodePairCode(code: string): PairPayload {
   return parsePairPayload(bytesToUtf8(fromBase64(standardB64)));
 }
 
+/**
+ * The WebSocket URL to connect to, from the daemon's advertised address. The app talks WebSocket, so
+ * the address is a `ws://host:port` URL used verbatim; returns null for any non-WebSocket address
+ * (which means the daemon has no WebSocket listener and this phone cannot reach it).
+ */
+export function wsUrlFromAddr(addr: string): string | null {
+  return /^wss?:\/\/.+/.test(addr) ? addr : null;
+}
+
 export interface PairingAttempt {
-  /** The `host:port` to dial, or null if the daemon advertised no reachable TCP address. */
+  /** The `ws://host:port` URL to connect to, or null if the daemon advertised no WebSocket address. */
   target: string | null;
   /** The device keypair minted for this pairing; persist its private key only on success. */
   device: { privateKey: Uint8Array; publicKey: Uint8Array };
@@ -51,7 +62,7 @@ export function startPairing(payload: PairPayload, deviceName: string): PairingA
   const devicePublicKeyB64 = spkiPublicKeyB64(device.publicKey);
   const proof = pairingProof(payload.s, devicePublicKeyB64, payload.pk);
   return {
-    target: tcpTargetFromAddr(payload.addr),
+    target: wsUrlFromAddr(payload.addr),
     device,
     completePair: { type: 'complete_pair', devicePublicKey: devicePublicKeyB64, deviceName, proof },
   };
@@ -62,11 +73,16 @@ export function startPairing(payload: PairPayload, deviceName: string): PairingA
  * the pairing payload (already authenticated by the proof), not from the network reply.
  */
 export function deviceRecordFromPaired(deviceId: string, attempt: PairingAttempt, payload: PairPayload): DeviceRecord {
+  if (!attempt.target) {
+    // A daemon we cannot reach over WebSocket is not worth persisting; the pairing screen guards this too.
+    throw new Error('the daemon advertised no WebSocket address; enable CC_CLIENT_WS_PORT on it to pair a phone.');
+  }
   return {
     deviceId,
     devicePrivateKey: toBase64(attempt.device.privateKey),
     devicePublicKey: attempt.completePair.devicePublicKey,
     daemonPublicKey: payload.pk,
+    daemonAddress: attempt.target,
   };
 }
 
