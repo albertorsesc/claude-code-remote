@@ -42,6 +42,9 @@ export default function ApprovalsScreen() {
       <FlashList
         style={styles.list}
         data={approvals}
+        // Each row's per-second countdown reads `now`, which is outside `data`; FlashList only
+        // re-renders cells on a data/extraData change, so this keeps the countdowns live.
+        extraData={now}
         keyExtractor={(item) => item.toolUseId}
         renderItem={({ item }) => (
           <ApprovalRow

@@ -92,6 +92,10 @@ export default function FleetScreen() {
       <FlashList
         style={styles.list}
         data={sessions}
+        // `now` ticks every second and drives the header auto-deny countdown and each row's relative
+        // time, but it lives outside `data`; FlashList re-renders cells only when data/extraData
+        // changes, so without this the countdowns and timestamps freeze between store events.
+        extraData={now}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <SessionRow session={item} now={now} onPress={() => router.push(`/session/${item.id}`)} />
