@@ -17,3 +17,21 @@ jobs:
       - run: npm ci # also creates the @claude-code-remote/* workspace links
       - run: npm run typecheck # tsc --noEmit: the load-bearing type gate (Node strips types unchecked)
       - run: npm test # node --test: unit tests per package + the meta tests
+
+  # apps/mobile is intentionally not a root workspace member (so a daemon-only clone stays lean), so
+  # the gate above never touches it. Gate it here on its own install.
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci # respects apps/mobile/.npmrc (legacy-peer-deps for Expo's transitive peer skew)
+      - run: npm run typecheck # tsc --noEmit
+      - run: npm test # node --test: the verified crypto/protocol core
