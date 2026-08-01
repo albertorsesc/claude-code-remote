@@ -32,7 +32,9 @@ export default function SettingsScreen() {
   const sessions = useFleetStore((state) => state.fleet.sessions);
   const unpair = useFleetStore((state) => state.unpair);
 
-  const [wakeForApprovals, setWakeForApprovals] = useState(true);
+  // Off and disabled until push registration is wired: a default-on control that persists nothing
+  // and drives nothing would misrepresent that the phone will actually wake you.
+  const [wakeForApprovals, setWakeForApprovals] = useState(false);
 
   const lastActivity = Object.values(sessions).reduce<number>((max, session) => Math.max(max, session.lastActivityAt), 0);
   const statusInfo = STATUS_LABEL[status];
@@ -82,9 +84,10 @@ export default function SettingsScreen() {
               <Switch
                 value={wakeForApprovals}
                 onValueChange={setWakeForApprovals}
+                disabled
                 trackColor={{ true: colors.accent, false: colors.line }}
                 thumbColor={colors.hi}
-                accessibilityLabel="Wake me for approvals"
+                accessibilityLabel="Wake me for approvals (available after push setup)"
               />
             }
             last

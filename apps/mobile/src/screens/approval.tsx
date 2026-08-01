@@ -25,7 +25,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { useIntervalNow } from '@/hooks/use-interval-now';
 import { useFleetStore } from '@/store/fleet-store';
-import { colors, monoFamily, radius, spacing, typography } from '@/theme/tokens';
+import { colors, monoFamily, radius, spacing, typography, URGENT_THRESHOLD_MS } from '@/theme/tokens';
 import { formatCountdown } from '@/utils/format';
 
 /** The raw tool input, rendered as the command when there is one, else pretty JSON. */
@@ -67,7 +67,7 @@ export default function ApprovalScreen() {
   const remaining = approval.deadlineAt - now;
   const window = Math.max(1, approval.deadlineAt - approval.requestedAt);
   const fraction = Math.max(0, Math.min(1, remaining / window));
-  const urgent = remaining <= 30_000;
+  const urgent = remaining <= URGENT_THRESHOLD_MS;
   const barColor = urgent ? colors.urgent : colors.accent;
 
   const submit = (decision: 'allow' | 'deny') => {

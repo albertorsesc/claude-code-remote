@@ -17,7 +17,7 @@ import { Screen } from '@/components/screen';
 import { useIntervalNow } from '@/hooks/use-interval-now';
 import { pendingApprovals } from '@/core/state/fleetState';
 import { useFleetStore } from '@/store/fleet-store';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { colors, spacing, typography, URGENT_THRESHOLD_MS } from '@/theme/tokens';
 import { firstLine, formatCountdown } from '@/utils/format';
 
 /** The best one-line headline for an approval: the model's description, else the command, else the tool. */
@@ -73,7 +73,7 @@ interface ApprovalRowProps {
 
 function ApprovalRow({ approval, session, now, onPress }: ApprovalRowProps) {
   const remaining = approval.deadlineAt - now;
-  const urgent = remaining <= 30_000;
+  const urgent = remaining <= URGENT_THRESHOLD_MS;
 
   return (
     <Card onPress={onPress} accessibilityLabel={`Approval for ${approval.toolName} in ${session?.label ?? 'a session'}`}>

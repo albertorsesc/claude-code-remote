@@ -50,6 +50,9 @@ export const radius = {
 /** Minimum comfortable touch target (iOS HIG 44, Material 48). */
 export const touchTarget = 44;
 
+/** Time left before auto-deny at which a countdown flips to the urgent colour. */
+export const URGENT_THRESHOLD_MS = 30_000;
+
 /** The platform monospace face, for cwd, commands, and data. */
 export const monoFamily = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 

@@ -81,8 +81,8 @@ export default function FleetScreen() {
         title="Sessions"
         right={
           <>
-            <IconButton icon="search" accessibilityLabel="Search sessions" onPress={() => undefined} />
-            <IconButton icon="plus" accessibilityLabel="New session" onPress={() => undefined} />
+            <IconButton icon="search" accessibilityLabel="Search sessions" onPress={() => undefined} disabled />
+            <IconButton icon="plus" accessibilityLabel="New session" onPress={() => undefined} disabled />
           </>
         }
       />
