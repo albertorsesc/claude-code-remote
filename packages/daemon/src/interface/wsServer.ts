@@ -108,6 +108,10 @@ class WsSocketShim extends EventEmitter {
         len = Number(this.buf.readBigUInt64BE(2));
         offset = 10;
       }
+      // Reject a frame whose declared payload alone exceeds the cap, BEFORE buffering it. Without this,
+      // a peer can declare a huge length and stream bytes to grow this.buf without bound: the frame
+      // never completes, so the post-assembly fragBytes cap below never fires and the daemon OOMs.
+      if (len > MAX_MESSAGE_BYTES) { this.destroy(); return; }
       let mask: Buffer | null = null;
       if (masked) {
         if (this.buf.length < offset + 4) return;
