@@ -77,13 +77,8 @@ export class JobQueue<S extends SessionHandle = SessionHandle> extends EventEmit
 
   enqueue(req: SpawnRequest, requestedBy: string): Job {
     const job: Job = {
+      ...req,
       id: randomUUID(),
-      cwd: req.cwd,
-      label: req.label,
-      disallowedTools: req.disallowedTools,
-      model: req.model,
-      permissionMode: req.permissionMode,
-      effort: req.effort,
       state: 'queued',
       requestedBy,
       createdAt: Date.now(),
@@ -141,10 +136,9 @@ export class JobQueue<S extends SessionHandle = SessionHandle> extends EventEmit
     // queue needs to keep draining. Failing the job releases the slot and lets the queue continue.
     let session: S;
     try {
-      session = this.opts.spawnSession({
-        cwd: job.cwd, label: job.label, disallowedTools: job.disallowedTools,
-        model: job.model, permissionMode: job.permissionMode, effort: job.effort,
-      });
+      // Job is structurally a superset of SpawnRequest, so pass it straight through: a new spawn
+      // field reaches the session without a third hand-copied literal to keep in agreement.
+      session = this.opts.spawnSession(job);
       job.sessionId = session.id;
       this.opts.db.updateJobState(job.id, { state: job.state, sessionId: session.id });
       this.opts.onSession(job, session);

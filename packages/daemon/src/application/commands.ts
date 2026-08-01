@@ -67,13 +67,10 @@ export function createCommandHandler(deps: {
         // client-visible error contract from before the job queue existed. Later transitions
         // (real queueing, async margin re-check, session exit) have no requester to reply to,
         // those go out only as job_update broadcasts, which every client already gets.
-        const job = jobQueue.enqueue(
-          {
-            cwd: cmd.cwd, label: cmd.label, disallowedTools: cmd.disallowedTools,
-            model: cmd.model, permissionMode: cmd.permissionMode, effort: cmd.effort,
-          },
-          deviceId,
-        );
+        // Pass the spawn fields straight through (minus the wire `type`) so a new SpawnRequest field
+        // flows to the queue automatically instead of being silently dropped by a hand-copied literal.
+        const { type: _spawn, ...spawnReq } = cmd;
+        const job = jobQueue.enqueue(spawnReq, deviceId);
         if (job.state === 'failed') {
           return send({ type: 'error', message: job.error! });
         }
