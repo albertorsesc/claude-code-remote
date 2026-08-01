@@ -142,12 +142,14 @@ export class Identity implements PairingService {
    * daemon log does distinguish them (see completePairing's PairingResult), which is what makes
    * "my phone will not pair" diagnosable without leaking anything to the client.
    */
-  beginPairing(address: string): { qr: string; secret: string; expiresAt: number } {
+  beginPairing(address: string): { qr: string; expiresAt: number } {
     const secret = randomBytes(24).toString('base64url');
     const expiresAt = Date.now() + PAIRING_TTL_MS;
     this.pendingPairing = { secret, expiresAt };
     const qr = JSON.stringify({ v: 1, addr: address, pk: this.publicKeyB64, s: secret });
-    return { qr, secret, expiresAt };
+    // The secret stays internal (pendingPairing) and travels only inside the QR payload; it must not
+    // cross this boundary as a bare field, matching the PairingService port.
+    return { qr, expiresAt };
   }
 
   /**
