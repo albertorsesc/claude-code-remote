@@ -25,6 +25,7 @@
   },
   "scripts": {
     "typecheck": "tsc",
-    "test": "node --test \"packages/*/tests/*.test.ts\" \"tests/meta/*.test.ts\""
+    "test": "node --test \"packages/*/tests/*.test.ts\" \"tests/meta/*.test.ts\"",
+    "mobile": "npm --prefix apps/mobile start"
   }
 }

@@ -9,10 +9,10 @@ storage/
 .claude/settings.local.json
 testbed/
 
-# Expo / React Native generated native projects and build output (apps/mobile)
+# Expo / React Native generated native projects and build output
+.expo/
 apps/mobile/ios/
 apps/mobile/android/
-apps/mobile/.expo/
 apps/mobile/expo-env.d.ts
 apps/mobile/dist/
 apps/mobile/web-build/
