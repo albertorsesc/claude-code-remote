@@ -11,7 +11,7 @@
  * the reliability invariants unit-testable against a fake crypto, with zero sockets or clocks.
  *
  * What the HOST still owns, because it is platform-specific:
- *   - the transport (Unix socket / node:net for the CLI; react-native-tcp-socket for the app),
+ *   - the transport (Unix socket / node:net for the CLI; a WebSocket for the app),
  *   - newline framing of the byte stream into messages,
  *   - the reconnect timer + backoff policy (a phone reconnects on foreground; the CLI on a fixed
  *     schedule, there is no single correct policy, so the engine does not impose one),
