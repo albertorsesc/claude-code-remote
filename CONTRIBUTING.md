@@ -72,6 +72,18 @@ Changes to these deserve extra scrutiny and the integration suite:
 - Match the surrounding code. Comments explain **why**, not what.
 - No em dashes in prose or comments. Use commas, colons, parentheses, or separate sentences.
 
+## Versioning and releases
+
+The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from its first tagged
+release. Until `1.0.0` the wire protocol and APIs may change; breaking changes are called out in the
+changelog.
+
+Every user-facing change updates the `## [Unreleased]` section of [CHANGELOG.md](CHANGELOG.md), under
+Added / Changed / Fixed / Removed / Security ([Keep a Changelog](https://keepachangelog.com/)).
+Internal-only changes (refactors, tests, comments) do not need an entry. A release moves the
+Unreleased entries under a new `## [x.y.z]` heading with the date, tags `vx.y.z`, and bumps the
+`version` in every `package.json`.
+
 ## Reporting security issues
 
 Do not open a public issue for a vulnerability. See [SECURITY.md](SECURITY.md).
