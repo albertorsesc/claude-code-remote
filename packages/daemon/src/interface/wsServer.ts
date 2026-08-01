@@ -117,6 +117,11 @@ class WsSocketShim extends EventEmitter {
         if (this.buf.length < offset + 4) return;
         mask = this.buf.subarray(offset, offset + 4);
         offset += 4;
+      } else {
+        // RFC 6455 5.1: every client-to-server frame must be masked. Drop a non-compliant or
+        // corrupted peer rather than accept an unmasked frame.
+        this.destroy();
+        return;
       }
       if (this.buf.length < offset + len) return; // whole frame not here yet
 
