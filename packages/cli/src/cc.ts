@@ -262,22 +262,52 @@ type CommandPlan = { payload: unknown; kind: 'watch' | 'read' | 'write'; termina
 
 function resolveCommand(): CommandPlan {
   switch (cmd) {
-    case 'watch': return { payload: null, kind: 'watch' };
-    case 'history': return { payload: { type: 'history', limit: rest[0] ? Number(rest[0]) : undefined }, kind: 'read', terminalEvent: 'approval_history' };
+    case 'watch':
+      return { payload: null, kind: 'watch' };
+    case 'history':
+      return {
+        payload: { type: 'history', limit: rest[0] ? Number(rest[0]) : undefined },
+        kind: 'read',
+        terminalEvent: 'approval_history',
+      };
     case 'spawn': {
       // cc spawn <cwd> [label] [--model X] [--mode plan] [--effort high]
       const { positionals, opts } = parseFlags(rest, ['model', 'mode', 'effort']);
-      return { payload: { type: 'spawn', cwd: positionals[0], label: positionals[1], model: opts.model, permissionMode: opts.mode, effort: opts.effort }, kind: 'write' };
+      return {
+        payload: {
+          type: 'spawn',
+          cwd: positionals[0],
+          label: positionals[1],
+          model: opts.model,
+          permissionMode: opts.mode,
+          effort: opts.effort,
+        },
+        kind: 'write',
+      };
     }
-    case 'send': return { payload: { type: 'send', sessionId: rest[0], text: rest.slice(1).join(' ') }, kind: 'write' };
-    case 'interrupt': return { payload: { type: 'interrupt', sessionId: rest[0] }, kind: 'write' };
-    case 'model': return { payload: { type: 'set_model', sessionId: rest[0], model: rest[1] }, kind: 'write' };
-    case 'mode': return { payload: { type: 'set_permission_mode', sessionId: rest[0], mode: rest[1] }, kind: 'write' };
-    // effort has no control request; it is the `/effort` slash command delivered as user text.
-    case 'effort': return { payload: { type: 'send', sessionId: rest[0], text: `/effort ${rest[1]}` }, kind: 'write' };
-    case 'allow': return { payload: { type: 'decide', toolUseId: rest[0], decision: 'allow', reason: rest.slice(1).join(' '), by: WHO }, kind: 'write' };
-    case 'deny': return { payload: { type: 'decide', toolUseId: rest[0], decision: 'deny', reason: rest.slice(1).join(' '), by: WHO }, kind: 'write' };
-    case 'revoke': return { payload: { type: 'revoke', deviceId: rest[0] }, kind: 'write', terminalEvent: 'revoked' };
+    case 'send':
+      return { payload: { type: 'send', sessionId: rest[0], text: rest.slice(1).join(' ') }, kind: 'write' };
+    case 'interrupt':
+      return { payload: { type: 'interrupt', sessionId: rest[0] }, kind: 'write' };
+    case 'model':
+      return { payload: { type: 'set_model', sessionId: rest[0], model: rest[1] }, kind: 'write' };
+    case 'mode':
+      return { payload: { type: 'set_permission_mode', sessionId: rest[0], mode: rest[1] }, kind: 'write' };
+    case 'effort':
+      // no control request; the `/effort` slash command is delivered as user text.
+      return { payload: { type: 'send', sessionId: rest[0], text: `/effort ${rest[1]}` }, kind: 'write' };
+    case 'allow':
+      return {
+        payload: { type: 'decide', toolUseId: rest[0], decision: 'allow', reason: rest.slice(1).join(' '), by: WHO },
+        kind: 'write',
+      };
+    case 'deny':
+      return {
+        payload: { type: 'decide', toolUseId: rest[0], decision: 'deny', reason: rest.slice(1).join(' '), by: WHO },
+        kind: 'write',
+      };
+    case 'revoke':
+      return { payload: { type: 'revoke', deviceId: rest[0] }, kind: 'write', terminalEvent: 'revoked' };
     default:
       console.error('usage: cc pair|pair-code|watch|history|spawn|send|interrupt|model|mode|effort|allow|deny|revoke');
       return process.exit(1);
