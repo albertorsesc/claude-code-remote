@@ -148,3 +148,14 @@ export interface PushRegistrar {
 export interface HookMarginPolicy {
   check(cwd: string, selfDenyMs: number): { ok: true } | { ok: false; reason: string };
 }
+
+/**
+ * Durable session lifecycle records, as the session wiring needs them. The Db conforms. This is the
+ * port that was missing: every other persistence path has one, but session start/activity/end was
+ * recorded by calling the concrete Db directly from the composition root.
+ */
+export interface SessionPersistenceStore {
+  recordSessionStarted(s: { id: string; cwd: string; label: string; startedAt: number }): void;
+  updateSessionActivity(id: string, claudeSessionId: string | null, model: string | null, at: number): void;
+  recordSessionEnded(id: string, finalState: string, exitCode: number | null, at: number): void;
+}

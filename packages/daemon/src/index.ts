@@ -29,6 +29,7 @@ import { JobQueue, type Job, type SpawnRequest } from './application/jobs.ts';
 import { wire, createCommandHandler } from './application/commands.ts';
 import { createPushService } from './application/pushService.ts';
 import { buildSnapshot } from './application/snapshot.ts';
+import { attachSessionPersistence } from './application/sessionPersistence.ts';
 
 import { ClientHub } from './interface/clientHub.ts';
 import { createHookServer } from './interface/hookBridge.ts';
@@ -112,18 +113,9 @@ function spawnSession(req: SpawnRequest): Session {
 }
 
 function onSession(job: Job, session: Session) {
-  db.recordSessionStarted({ id: session.id, cwd: session.cwd, label: session.label, startedAt: session.startedAt });
+  attachSessionPersistence(session, db, log);
   wire(session, sessions, broadcast, log);
   log(`spawned ${session.label} in ${session.cwd} (${session.id}), job ${job.id}`);
-  session.on('state', () => db.updateSessionActivity(session.id, session.claudeSessionId, session.model, session.lastActivityAt));
-  session.on('exit', (code: number | null) => db.recordSessionEnded(session.id, session.state, code, Date.now()));
-  // Without this listener everything a spawned session writes to stderr is silently discarded, and
-  // a session that failed to start, hit a rate limit, or died on a bad flag looks identical to one
-  // thinking quietly. Truncated because stderr is untrusted volume, not a log stream we control.
-  session.on('stderr', (text: string) => {
-    const line = text.trim();
-    if (line) log(`session ${session.label} (${session.id}) stderr: ${line.slice(0, 500)}`);
-  });
 }
 
 const jobQueue = new JobQueue({
