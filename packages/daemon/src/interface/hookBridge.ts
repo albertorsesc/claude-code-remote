@@ -1,5 +1,6 @@
 import net from 'node:net';
 import type { PendingApproval, ServerEvent, SessionInfo } from '@claude-code-remote/protocol';
+import { LineFramer } from '@claude-code-remote/protocol';
 import type { ApprovalBroker } from '../domain/approvals.ts';
 import type { Logger } from '../application/ports.ts';
 import { guardMessage } from './messageGuard.ts';
@@ -39,29 +40,21 @@ export function createHookServer(deps: HookBridgeDeps): net.Server {
   const { broker, sessionByClaudeId, selfDenyMs, broadcast, log } = deps;
 
   return net.createServer((sock) => {
-    let buf = '';
     // The toolUseIds THIS socket actually claimed in the broker. Only these may be abandoned when
     // the socket closes, a duplicate whose open() was rejected must not abandon the legitimate
     // first request that owns the id (its socket-close would otherwise deny the real blocked hook).
     const claimed = new Set<string>();
 
-    sock.on('data', (chunk) => {
-      buf += chunk.toString('utf8');
-      if (buf.length > MAX_HOOK_LINE) {
-        log(`hook bridge: ${buf.length} bytes with no newline (cap ${MAX_HOOK_LINE}), dropping connection`);
-        buf = '';
+    const framer = new LineFramer({
+      maxBytes: MAX_HOOK_LINE,
+      onOverflow: (bytes, cap) => {
+        log(`hook bridge: ${bytes} bytes with no newline (cap ${cap}), dropping connection`);
         sock.destroy();   // the bridge fails closed on its own side, so the tool call is denied
-        return;
-      }
-      let i: number;
-      while ((i = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, i);
-        buf = buf.slice(i + 1);
-        if (!line.trim()) continue;
-
+      },
+      onLine: (line) => {
         let msg: any;
-        try { msg = JSON.parse(line); } catch { continue; }
-        if (msg.kind !== 'approval_request') continue;
+        try { msg = JSON.parse(line); } catch { return; }
+        if (msg.kind !== 'approval_request') return;
 
         // Guarded: this is where a duplicate tool_use_id once threw a UNIQUE violation out of the
         // socket callback and killed the daemon, abandoning every pending approval on the machine.
@@ -109,8 +102,9 @@ export function createHookServer(deps: HookBridgeDeps): net.Server {
           broadcast({ type: 'approval_pending', approval });
           if (owner) broadcast({ type: 'session_update', session: owner.info() });
         });
-      }
+      },
     });
+    sock.on('data', (chunk) => framer.push(chunk.toString('utf8')));
 
     // Bridge disappeared before a decision: it fails closed locally, so just clean up. Only the ids
     // this socket actually claimed are abandoned; a decided id no-ops in abandon(), and a rejected
