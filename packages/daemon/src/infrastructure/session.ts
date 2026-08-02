@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import type { EffortLevel, PermissionMode, SessionInfo, SessionState } from '@claude-code-remote/protocol';
+import { LineFramer } from '@claude-code-remote/protocol';
 import { deriveSessionState } from './sessionState.ts';
 
 export interface SpawnOptions {
@@ -37,7 +38,14 @@ export class Session extends EventEmitter {
   private pendingApprovals = new Set<string>();
 
   private proc: ChildProcessWithoutNullStreams;
-  private buf = '';
+  // stdout is claude's stream-json, one JSON event per line. Trusted local child, so no byte cap.
+  private readonly framer = new LineFramer({
+    onLine: (line) => {
+      let ev: unknown;
+      try { ev = JSON.parse(line); } catch { return; }
+      this.handleEvent(ev);
+    },
+  });
 
   constructor(opts: SpawnOptions) {
     super();
@@ -75,7 +83,7 @@ export class Session extends EventEmitter {
       if (this.state === 'starting') this.setState('ready');
     });
 
-    this.proc.stdout.on('data', (c) => this.onStdout(c.toString('utf8')));
+    this.proc.stdout.on('data', (c) => this.framer.push(c.toString('utf8')));
     this.proc.stderr.on('data', (c) => this.emit('stderr', c.toString('utf8')));
     this.proc.on('exit', (code) => {
       // Node's docs say 'exit' may fire AFTER 'error' for the same failure. If 'error' already drove
@@ -93,23 +101,6 @@ export class Session extends EventEmitter {
       this.setState('errored');
       this.emit('exit', null, err);
     });
-  }
-
-  private onStdout(chunk: string) {
-    this.buf += chunk;
-    let i: number;
-    while ((i = this.buf.indexOf('\n')) >= 0) {
-      const line = this.buf.slice(0, i);
-      this.buf = this.buf.slice(i + 1);
-      if (!line.trim()) continue;
-      let ev: any;
-      try {
-        ev = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      this.handleEvent(ev);
-    }
   }
 
   private handleEvent(ev: any) {
