@@ -7,6 +7,7 @@
  */
 import * as SecureStore from 'expo-secure-store';
 import type { DeviceRecord } from '@/core/protocol/pairing';
+import { parseSeq, parseStoredDevice } from './persist-codec';
 
 const DEVICE_KEY = 'ccr.device';
 const SEQ_KEY = 'ccr.seq';
@@ -22,13 +23,7 @@ export interface StoredDevice {
 
 /** Load the paired device, or null if this phone has never paired (or the entry is unreadable). */
 export async function loadStoredDevice(): Promise<StoredDevice | null> {
-  const raw = await SecureStore.getItemAsync(DEVICE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as StoredDevice;
-  } catch {
-    return null;
-  }
+  return parseStoredDevice(await SecureStore.getItemAsync(DEVICE_KEY));
 }
 
 /** Persist the paired device. The DeviceRecord inside is JSON encoded. */
@@ -44,9 +39,7 @@ export async function clearStoredDevice(): Promise<void> {
 
 /** The persisted outbound seq high-water mark (0 if never set). */
 export async function loadSeq(): Promise<number> {
-  const raw = await SecureStore.getItemAsync(SEQ_KEY);
-  const value = raw ? Number.parseInt(raw, 10) : 0;
-  return Number.isFinite(value) && value >= 0 ? value : 0;
+  return parseSeq(await SecureStore.getItemAsync(SEQ_KEY));
 }
 
 /** Persist the outbound seq high-water mark. */
