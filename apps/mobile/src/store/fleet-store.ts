@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { applyEvent, emptyFleetState, type FleetState } from '@/core/state/fleetState';
 import { createConnection, type ConnectionStatus, type ManagedConnection } from './connection';
 import { createSeqCounter } from './seq';
-import { clearStoredDevice, loadStoredDevice, saveStoredDevice, type StoredDevice } from './secure-store';
+import { clearStoredDevice, loadStoredDevice, saveStoredDevice, loadSeq, saveSeq, type StoredDevice } from './secure-store';
 import { decodePairCode, deviceRecordFromPaired, startPairing } from '@/core/protocol/pairing';
 import { completePairOverWebSocket } from '@/core/pair-transport';
 import type { EffortLevel, PermissionMode } from '@claude-code-remote/protocol';
@@ -54,7 +54,7 @@ export const useFleetStore = create<FleetStore>()((set, get) => {
     const device = get().device;
     if (!device) return null;
     if (!managed) {
-      const seq = await createSeqCounter();
+      const seq = await createSeqCounter({ loadSeq, saveSeq });
       managed = createConnection(device.record, {
         nextSeq: seq.next,
         onEvent: (event) => set((state) => ({ fleet: applyEvent(state.fleet, event) })),

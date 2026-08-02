@@ -8,8 +8,6 @@
  * Invariant: the persisted value is always at least as large as every seq ever returned. So the next
  * launch starts strictly above the last one, even if the app was killed mid-block.
  */
-import { loadSeq, saveSeq } from './secure-store';
-
 /** How many seqs to reserve per disk write. A larger block means fewer writes but a bigger jump if
  *  the app is killed without sending them all (which only wastes numbers, never reuses one). */
 const RESERVE = 256;
@@ -19,12 +17,19 @@ export interface SeqCounter {
   next: () => number;
 }
 
+/** Persistence of the high-water mark, injected so the counter logic is testable without the
+ *  platform keystore. secure-store's loadSeq/saveSeq conform. */
+export interface SeqStore {
+  loadSeq(): Promise<number>;
+  saveSeq(value: number): Promise<void>;
+}
+
 /** Build a seq counter seeded from the persisted high-water mark. */
-export async function createSeqCounter(): Promise<SeqCounter> {
-  const start = await loadSeq();
+export async function createSeqCounter(store: SeqStore): Promise<SeqCounter> {
+  const start = await store.loadSeq();
   let current = start;
   let ceiling = start + RESERVE;
-  await saveSeq(ceiling);
+  await store.saveSeq(ceiling);
 
   return {
     next: () => {
@@ -32,7 +37,7 @@ export async function createSeqCounter(): Promise<SeqCounter> {
       if (current >= ceiling) {
         ceiling = current + RESERVE;
         // Fire-and-forget: the reservation is ahead of use, so a lost write only wastes numbers.
-        void saveSeq(ceiling);
+        void store.saveSeq(ceiling);
       }
       return current;
     },
