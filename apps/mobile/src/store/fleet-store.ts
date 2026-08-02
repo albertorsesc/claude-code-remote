@@ -4,6 +4,7 @@
  * live connection and seq counter are side effects, so they live in module scope rather than in the
  * rendered state, which stays a plain, serialisable snapshot of the fleet.
  */
+import { AppState } from 'react-native';
 import { create } from 'zustand';
 import { applyEvent, emptyFleetState, type FleetState } from '@/core/state/fleetState';
 import { createConnection, type ConnectionStatus, type ManagedConnection } from './connection';
@@ -60,6 +61,10 @@ export const useFleetStore = create<FleetStore>()((set, get) => {
         onEvent: (event) => set((state) => ({ fleet: applyEvent(state.fleet, event) })),
         onStatus: (status: ConnectionStatus) => set({ status }),
         onHelloRejected: () => set({ error: 'The daemon rejected this device. It may have been unpaired remotely.' }),
+        subscribeForeground: (onForeground) => {
+          const sub = AppState.addEventListener('change', (state) => { if (state === 'active') onForeground(); });
+          return () => sub.remove();
+        },
       });
     }
     return managed;

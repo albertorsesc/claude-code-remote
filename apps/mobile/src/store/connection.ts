@@ -9,9 +9,8 @@
  * foreground reopens it. Each reopen is a fresh hello, so the daemon re-sends the full session_list;
  * this favours a simple, dependency-free resync over seq-resume replay.
  */
-import { AppState, type AppStateStatus, type NativeEventSubscription } from 'react-native';
-import { openWebSocket, type Connection } from '@/core/transport';
-import { sessionCryptoFromRecord, type DeviceRecord } from '@/core/protocol/pairing';
+import { openWebSocket, type Connection } from '../core/transport.ts';
+import { sessionCryptoFromRecord, type DeviceRecord } from '../core/protocol/pairing.ts';
 import type { ClientCommand, ServerEvent } from '@claude-code-remote/protocol';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -25,6 +24,10 @@ export interface ConnectionHandlers {
   onStatus: (status: ConnectionStatus) => void;
   /** The daemon rejected our hello (for example after a remote revoke). */
   onHelloRejected?: () => void;
+  /** Subscribe to app-foreground events, returning an unsubscribe. Injected rather than importing
+   *  AppState here, so the reconnect policy is testable without react-native. Omit to disable
+   *  foreground reconnect. */
+  subscribeForeground?: (onForeground: () => void) => () => void;
 }
 
 export interface ManagedConnection {
@@ -40,7 +43,7 @@ export interface ManagedConnection {
 export function createConnection(record: DeviceRecord, handlers: ConnectionHandlers): ManagedConnection {
   const crypto = sessionCryptoFromRecord(record);
   let connection: Connection | null = null;
-  let appStateSubscription: NativeEventSubscription | null = null;
+  let unsubscribeForeground: (() => void) | null = null;
   let closedByUser = false;
 
   const open = (): void => {
@@ -66,9 +69,9 @@ export function createConnection(record: DeviceRecord, handlers: ConnectionHandl
   return {
     connect: () => {
       closedByUser = false;
-      if (!appStateSubscription) {
-        appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
-          if (state === 'active' && !closedByUser && !connection) open();
+      if (!unsubscribeForeground && handlers.subscribeForeground) {
+        unsubscribeForeground = handlers.subscribeForeground(() => {
+          if (!closedByUser && !connection) open();
         });
       }
       open();
@@ -76,8 +79,8 @@ export function createConnection(record: DeviceRecord, handlers: ConnectionHandl
 
     disconnect: () => {
       closedByUser = true;
-      appStateSubscription?.remove();
-      appStateSubscription = null;
+      unsubscribeForeground?.();
+      unsubscribeForeground = null;
       connection?.close();
       connection = null;
       handlers.onStatus('disconnected');
