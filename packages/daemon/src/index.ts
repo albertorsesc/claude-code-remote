@@ -145,7 +145,6 @@ let advertisedAddress = `unix://${config.clientSock}`;
 
 const handleCommand = createCommandHandler({
   sessions, broker, jobQueue, identity, db, push: pushService, log,
-  reply: (sock, ev) => hub.sendTo(sock, ev),
   disconnectDevice: (deviceId) => hub.disconnectDevice(deviceId),
 });
 

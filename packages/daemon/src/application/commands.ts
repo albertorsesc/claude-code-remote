@@ -1,4 +1,3 @@
-import type net from 'node:net';
 import type { SessionHandle } from './ports.ts';
 import type { ApprovalBroker } from '../domain/approvals.ts';
 import type { ApprovalHistoryReader, DeviceTrustRegistry, JobEnqueuer, Logger, PushRegistrar } from './ports.ts';
@@ -36,16 +35,14 @@ export function createCommandHandler(deps: {
   identity: DeviceTrustRegistry;
   db: ApprovalHistoryReader;
   push: PushRegistrar;
-  /** Closes the live connection for a device, if any, the socket-map scan lives in index.ts,
-   *  since commands.ts has no reason to know about sockets beyond the one it's replying to. */
+  /** Closes the live connection for a device, if any. commands.ts does not deal in sockets: the
+   *  socket-map scan lives in index.ts, and a reply goes to the `send` the caller already bound. */
   disconnectDevice: (deviceId: string) => void;
   log: Logger;
-  reply: (sock: net.Socket, ev: ServerEvent) => void;
 }) {
-  const { sessions, broker, jobQueue, identity, db, push, disconnectDevice, log, reply } = deps;
+  const { sessions, broker, jobQueue, identity, db, push, disconnectDevice, log } = deps;
 
-  return function handleCommand(cmd: ClientCommand, sock: net.Socket, deviceId: string) {
-    const send = (ev: ServerEvent) => reply(sock, ev);
+  return function handleCommand(cmd: ClientCommand, send: (ev: ServerEvent) => void, deviceId: string) {
 
     switch (cmd.type) {
       case 'list':
