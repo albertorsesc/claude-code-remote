@@ -10,10 +10,11 @@ claude-code-remote is an npm workspace with three published-shape packages plus 
   `node:crypto` implementation lives behind a separate `@claude-code-remote/protocol/node` subpath.
 - **`packages/daemon`** is the daemon, in clean-architecture layers (below).
 - **`packages/cli`** is the `cc` reference client.
-- **`apps/mobile`** is the Expo React Native app. Its on-device crypto is built and verified
-  byte-compatible with the daemon; the screens are not built yet. It is intentionally not part of the
-  root npm workspace, so installing and running the daemon and CLI never pulls the React Native
-  dependency tree.
+- **`apps/mobile`** is the Expo React Native app (Nocturne design). Its on-device crypto is built and
+  verified byte-compatible with the daemon, and the fleet, approvals, approval-decision, and settings
+  screens are built on the shared reliability layer (session detail and the pairing camera are in
+  progress). It is intentionally not part of the root npm workspace, so installing and running the
+  daemon and CLI never pulls the React Native dependency tree.
 
 ## The daemon is layered, and the layering is enforced
 
@@ -47,6 +48,8 @@ process or a database.
 | `sync.ts` | Per-device monotonic seq counter (`OutboundStream`) and inbound dedup (`InboundStream`). |
 | `resend.ts` | The client's reverse buffer for command redelivery (unacked commands, bounded, hard-fail on overflow). |
 | `client.ts` | `ReliableClient`: the sans-IO client reliability state machine (reconnect-replay, inbound dedup, command resend, ack accounting). Written and tested once, driven by the CLI and the RN app over their own transport and crypto. |
+| `lineFramer.ts` | Newline framing of a byte stream into messages, with an optional max-unframed-bytes cap. Shared by the CLI and the daemon so no host hand-rolls it. |
+| `pairCode.ts` | The out-of-band pairing-payload format (parse/validate), shared so the daemon, CLI, and app agree on it. |
 | `pairing-proof.ts` | The pairing HMAC, shared so the daemon and any client compute it identically. |
 | **`packages/daemon/src/domain/`** | **Business rules. Pure.** |
 | `approvals.ts` | Single arbiter, compare-and-swap, first decision wins. |
@@ -59,6 +62,8 @@ process or a database.
 | `commands.ts` | Client command dispatch, unit-testable without a live socket, with an exhaustiveness guard. |
 | `jobs.ts` | Job queue for spawn requests: immediate under the concurrency cap, real queueing once it is set and hit. |
 | `pushService.ts` | The push use case: stores per-device registrations and, on a new approval, fans a generic ping to the registered tokens. |
+| `snapshot.ts` | Assembles the ordered first-hello snapshot (session_list, then pending approvals, then jobs). Pure and tested. |
+| `sessionPersistence.ts` | Maps a session's lifecycle to the durable store and applies the stderr policy, through a store port. Pure of the composition root, tested. |
 | **`packages/daemon/src/infrastructure/`** | **Adapters.** |
 | `session.ts` | One headless session; state from typed hook notifications, not output scraping. |
 | `db.ts` | Durable store (SQLite via `node:sqlite`): approvals, session history, job state, push registrations. |
@@ -71,8 +76,11 @@ process or a database.
 | `clientHub.ts` | Owns live authenticated sockets and every sealed write and broadcast. |
 | `clientConnection.ts` | The trust boundary: pairing handshake, frame authentication, inbound dedup, acks. |
 | `hookBridge.ts` | One connection per blocked tool call, held open until decided. |
+| `wsServer.ts` | Self-contained WebSocket listener (RFC 6455, zero dependency) so an Expo Go phone can reach the daemon; presents each connection to the unchanged handler. |
+| `messageGuard.ts` | The crash backstop: runs one message's handling so a thrown handler cannot take the daemon down, and reports whether it completed. |
 | `index.ts` | Composition root. |
-| `packages/cli/src/cc.ts` | The `cc` client, and the reference host for `ReliableClient`: owns the socket, framing, reconnect backoff, the crypto adapter, the cross-process seq lock, and the render and exit policy. |
+| `packages/cli/src/cc.ts` | The `cc` client, and the reference host for `ReliableClient`: owns the socket, reconnect backoff, the crypto adapter, the cross-process seq lock, and the command/exit policy. Framing is the shared `LineFramer`; rendering lives in `render.ts`. |
+| `packages/cli/src/render.ts` | Terminal rendering of server events, including the control-character neutralizer that guards the fleet view and audit trail. Pure and unit-tested. |
 | `packages/cli/src/pairing.ts` | Encode/decode of the out-of-band pairing code. Pure, unit-testable apart from cc.ts's sockets. |
 
 ## Reliability: reconnect resumes, it does not just resync

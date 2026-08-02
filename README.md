@@ -191,14 +191,20 @@ is allowed, and omitting the mode uses the default per-tool approval flow.
 Over a Tailscale tailnet, with `tailscale` on PATH on the daemon's machine:
 
 ```bash
-# on the daemon's machine: CC_CLIENT_TCP_PORT alone auto-discovers the tailnet IP
-CC_CLIENT_TCP_PORT=7443 node packages/daemon/src/index.ts
+# on the daemon's machine. The phone app speaks WebSocket, so set CC_CLIENT_WS_PORT.
+# Add CC_CLIENT_TCP_PORT too if you also want the `cc` CLI from a second machine.
+# Either port alone auto-discovers the tailnet IP.
+CC_CLIENT_WS_PORT=7443 node packages/daemon/src/index.ts
 ```
 
 Pairing always bootstraps locally (a security boundary, explained in
 [docs/PAIRING.md](docs/PAIRING.md)); the one-time secret leaves the daemon machine out of band (a QR
 for a phone via `cc pair-qr`, a copy-pasteable code for a second machine via `cc pair-code`) and never
 over the network. The full pairing and remote-access flow is in [docs/PAIRING.md](docs/PAIRING.md).
+
+The mobile app installs and runs on its own (it is deliberately not part of the root npm workspace, so
+a daemon-only clone stays lean): see [apps/mobile/README.md](apps/mobile/README.md) for its
+`npm install` and `npx expo start`.
 
 ## Security model
 
@@ -231,7 +237,7 @@ when a layer imports outward.
 | `packages/protocol/` | Shared wire kernel: sealed-frame format, reliability state machine, types. Importable in React Native. |
 | `packages/daemon/` | The daemon, in clean-architecture layers (`domain` / `application` / `infrastructure` / `interface`) plus a composition root. |
 | `packages/cli/` | The `cc` reference client. |
-| `apps/mobile/` | The Expo React Native app (crypto core built and verified; screens pending). |
+| [`apps/mobile/`](apps/mobile/README.md) | The Expo React Native app: verified crypto core plus the Nocturne UI (fleet, approvals, approval decision, settings; session detail and the pairing camera in progress). Installs separately. |
 | `tests/` | Integration suite (real daemon + real session) and the test runners. |
 
 A full file-by-file breakdown is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

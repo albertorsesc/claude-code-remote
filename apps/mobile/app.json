@@ -6,15 +6,11 @@
     "version": "0.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "Connect to your Claude daemon over your private Tailscale network."
       }
-    },
-    "android": {
-      "edgeToEdgeEnabled": true
     },
     "plugins": [
       "expo-router",

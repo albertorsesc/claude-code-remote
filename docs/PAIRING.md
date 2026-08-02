@@ -69,9 +69,13 @@ reply. The secret never crosses the network.
 ## Pairing a phone
 
 The phone flow is the same shape as the second-machine flow, with a QR as the out-of-band channel.
-On the daemon machine:
+The phone app speaks WebSocket, so the daemon must expose the WebSocket listener (the TCP listener
+above serves the `cc` CLI only). Start it with `CC_CLIENT_WS_PORT`, which is what makes the pairing QR
+advertise the `ws://` address the app connects to; with only `CC_CLIENT_TCP_PORT` set, the QR encodes
+a `tcp://` address the phone cannot use.
 
 ```bash
+CC_CLIENT_WS_PORT=7443 node packages/daemon/src/index.ts
 cc pair-qr
 ```
 

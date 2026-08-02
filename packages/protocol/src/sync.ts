@@ -19,9 +19,10 @@
 export class OutboundStream {
   private seq: number;
 
-  // startSeq seeds the counter. The daemon uses 0 (per-device, reset on restart). A CLI client
-  // seeds from a persisted per-device high-water so seq keeps climbing across separate process
-  // invocations, the daemon's inbound dedup is per-device and persistent, so a fresh process
+  // startSeq seeds the counter. The daemon uses 0 (per-device, reset on restart). The CLI does not
+  // use this class; it keeps seq climbing across separate process invocations via
+  // reserveOutSeq/persistOutSeq (packages/cli/src/deviceStore.ts). Either way the seq must not
+  // restart low: the daemon's inbound dedup is per-device and persistent, so a fresh process
   // restarting seq at 1 would collide with a prior process's seq 1 and get its command deduped.
   constructor(startSeq = 0) {
     this.seq = startSeq;

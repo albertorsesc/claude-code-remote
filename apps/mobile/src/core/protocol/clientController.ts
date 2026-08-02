@@ -1,8 +1,8 @@
 /**
  * The RN host for the shared `ReliableClient`, the mobile analogue of the CLI's cc.ts host. It owns
- * the newline framing and the drain/write plumbing, and is deliberately transport-agnostic: the real
- * `react-native-tcp-socket` adapter (and, in tests, a fake) call `connected()` / `feed()` /
- * `disconnected()` and supply a `write`, and the screens call `send()`. The reliability itself
+ * the newline framing and the drain/write plumbing, and is deliberately transport-agnostic: the
+ * WebSocket transport (and, in tests, a fake) calls `connected()` / `feed()` / `disconnected()` and
+ * supplies a `write`, and the screens call `send()`. The reliability itself
  * (reconnect-replay, dedup, resend, acks) lives in the engine, not here.
  *
  * Reconnect/backoff is intentionally NOT built in: a phone reconnects on app foreground and network

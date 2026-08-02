@@ -28,7 +28,7 @@ export interface ClientConnectionDeps {
   /** Whichever client-facing address is genuinely live right now, read late, because the TCP
    *  listener may start after this handler is built and change the answer. */
   advertisedAddress: () => string;
-  handleCommand: (cmd: ClientCommand, sock: net.Socket, deviceId: string) => void;
+  handleCommand: (cmd: ClientCommand, send: (ev: ServerEvent) => void, deviceId: string) => void;
   log: Logger;
 }
 
@@ -200,7 +200,7 @@ export function createClientConnectionHandler(deps: ClientConnectionDeps): (sock
         // Guarded: a command handler that throws (a failed durable write, a malformed payload the
         // dispatcher didn't anticipate) must not terminate the daemon and every other session with it.
         const handled = guardMessage(log, `handling ${cmd?.type ?? 'a command'} from ${conn.deviceId}`,
-          () => handleCommand(cmd, sock, conn.deviceId));
+          () => handleCommand(cmd, (ev) => hub.sendTo(sock, ev), conn.deviceId));
         // Only a command that actually ran advances the ack level. The dedup watermark is NOT
         // rolled back on failure, deliberately: a handler that threw may already have applied part
         // of its effect, and re-running it could duplicate that (a half-spawned session). Losing

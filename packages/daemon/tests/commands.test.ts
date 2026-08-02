@@ -1,6 +1,6 @@
-// First dedicated unit test for commands.ts, prompted by adding the `revoke` case, proves
-// dispatch logic works without a real socket, which is the whole point of extracting it
-// from the composition root.
+// commands.ts dispatch, proven without a socket: the handler takes a bound `send(ev)`, so a test
+// captures replies directly instead of faking a net.Socket. That the application layer no longer
+// names a transport type is the whole point of the extraction.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
@@ -12,6 +12,7 @@ const noopPush = { register: () => {}, unregister: () => {} } as any;
 
 function harness() {
   const replies: ServerEvent[] = [];
+  const send = (ev: ServerEvent) => { replies.push(ev); };
   const disconnected: string[] = [];
   const revokeCalls: string[] = [];
   const historyLimits: number[] = [];
@@ -43,15 +44,14 @@ function harness() {
     push,
     disconnectDevice: (deviceId: string) => disconnected.push(deviceId),
     log: () => {},
-    reply: (_sock, ev) => replies.push(ev),
   });
 
-  return { handleCommand, replies, disconnected, revokeCalls, historyLimits, pushRegister, pushUnregister };
+  return { handleCommand, send, replies, disconnected, revokeCalls, historyLimits, pushRegister, pushUnregister };
 }
 
 test('revoke: unknown device replies with an error and never disconnects anything', () => {
-  const { handleCommand, replies, disconnected, revokeCalls } = harness();
-  handleCommand({ type: 'revoke', deviceId: 'unknown-device' }, {} as any, 'requester');
+  const { handleCommand, send, replies, disconnected, revokeCalls } = harness();
+  handleCommand({ type: 'revoke', deviceId: 'unknown-device' }, send, 'requester');
 
   assert.deepEqual(revokeCalls, ['unknown-device']);
   assert.equal(disconnected.length, 0);
@@ -60,8 +60,8 @@ test('revoke: unknown device replies with an error and never disconnects anythin
 });
 
 test('revoke: known device disconnects it and replies with confirmation', () => {
-  const { handleCommand, replies, disconnected } = harness();
-  handleCommand({ type: 'revoke', deviceId: 'known-device' }, {} as any, 'requester');
+  const { handleCommand, send, replies, disconnected } = harness();
+  handleCommand({ type: 'revoke', deviceId: 'known-device' }, send, 'requester');
 
   assert.deepEqual(disconnected, ['known-device']);
   assert.equal(replies.length, 1);
@@ -69,22 +69,22 @@ test('revoke: known device disconnects it and replies with confirmation', () => 
 });
 
 test('revoke also forgets the device push token (no push to a device we no longer trust)', () => {
-  const { handleCommand, pushUnregister } = harness();
-  handleCommand({ type: 'revoke', deviceId: 'known-device' }, {} as any, 'requester');
+  const { handleCommand, send, pushUnregister } = harness();
+  handleCommand({ type: 'revoke', deviceId: 'known-device' }, send, 'requester');
   assert.deepEqual(pushUnregister, ['known-device']);
 });
 
 test('register_push binds the token to the AUTHENTICATED device, not a caller-chosen field', () => {
-  const { handleCommand, pushRegister } = harness();
+  const { handleCommand, send, pushRegister } = harness();
   // The deviceId argument is the sealed frame's authenticated identity; there is no device field in
   // the command for a caller to spoof.
-  handleCommand({ type: 'register_push', token: 'ExponentPushToken[abc]', platform: 'ios' }, {} as any, 'auth-device');
+  handleCommand({ type: 'register_push', token: 'ExponentPushToken[abc]', platform: 'ios' }, send, 'auth-device');
   assert.deepEqual(pushRegister, [['auth-device', 'ExponentPushToken[abc]', 'ios']]);
 });
 
 test('history: replies with approval_history from the db, defaulting the limit to 50', () => {
-  const { handleCommand, replies, historyLimits } = harness();
-  handleCommand({ type: 'history' }, {} as any, 'requester');
+  const { handleCommand, send, replies, historyLimits } = harness();
+  handleCommand({ type: 'history' }, send, 'requester');
 
   assert.deepEqual(historyLimits, [50]);
   assert.equal(replies.length, 1);
@@ -92,10 +92,10 @@ test('history: replies with approval_history from the db, defaulting the limit t
 });
 
 test('history: an explicit limit is passed through, capped at 500', () => {
-  const { handleCommand, historyLimits } = harness();
-  handleCommand({ type: 'history', limit: 5 }, {} as any, 'requester');
-  handleCommand({ type: 'history', limit: 9999 }, {} as any, 'requester');
-  handleCommand({ type: 'history', limit: -3 }, {} as any, 'requester'); // invalid → default
+  const { handleCommand, send, historyLimits } = harness();
+  handleCommand({ type: 'history', limit: 5 }, send, 'requester');
+  handleCommand({ type: 'history', limit: 9999 }, send, 'requester');
+  handleCommand({ type: 'history', limit: -3 }, send, 'requester'); // invalid → default
 
   assert.deepEqual(historyLimits, [5, 500, 50]);
 });
@@ -105,8 +105,8 @@ test('an unrecognized command type is a loud throw (exhaustiveness guard), never
   // asserted at runtime, but the runtime backstop can: a command type outside the union hits the
   // assertNever default and throws, so in production guardMessage logs it loudly and does NOT ack,
   // rather than the old silent fall-through that acked a command which never ran.
-  const { handleCommand } = harness();
-  assert.throws(() => handleCommand({ type: 'totally-unknown' } as any, {} as any, 'dev1'),
+  const { handleCommand, send } = harness();
+  assert.throws(() => handleCommand({ type: 'totally-unknown' } as any, send, 'dev1'),
     /unhandled union member/);
 });
 
@@ -136,6 +136,7 @@ class FakeSession extends EventEmitter {
 
 function configHarness() {
   const replies: ServerEvent[] = [];
+  const send = (ev: ServerEvent) => { replies.push(ev); };
   const sessions = new Map<string, any>();
   const handleCommand = createCommandHandler({
     sessions,
@@ -146,29 +147,28 @@ function configHarness() {
     push: noopPush,
     disconnectDevice: () => {},
     log: () => {},
-    reply: (_sock: any, ev: ServerEvent) => replies.push(ev),
   });
-  return { handleCommand, replies, sessions };
+  return { handleCommand, send, replies, sessions };
 }
 
 test('set_model steers the running session; unknown session errors', () => {
-  const { handleCommand, replies, sessions } = configHarness();
+  const { handleCommand, send, replies, sessions } = configHarness();
   const s = new FakeSession('sess-1');
   sessions.set('sess-1', s);
-  handleCommand({ type: 'set_model', sessionId: 'sess-1', model: 'opus' }, {} as any, 'dev1');
+  handleCommand({ type: 'set_model', sessionId: 'sess-1', model: 'opus' }, send, 'dev1');
   assert.deepEqual(s.models, ['opus']);
-  handleCommand({ type: 'set_model', sessionId: 'nope', model: 'opus' }, {} as any, 'dev1');
+  handleCommand({ type: 'set_model', sessionId: 'nope', model: 'opus' }, send, 'dev1');
   assert.equal(replies.at(-1)!.type, 'error');
 });
 
 test('set_permission_mode allows plan, refuses an auto-approving mode', () => {
-  const { handleCommand, replies, sessions } = configHarness();
+  const { handleCommand, send, replies, sessions } = configHarness();
   const s = new FakeSession('sess-1');
   sessions.set('sess-1', s);
-  handleCommand({ type: 'set_permission_mode', sessionId: 'sess-1', mode: 'plan' }, {} as any, 'dev1');
+  handleCommand({ type: 'set_permission_mode', sessionId: 'sess-1', mode: 'plan' }, send, 'dev1');
   assert.deepEqual(s.modes, ['plan'], 'plan is applied');
 
-  handleCommand({ type: 'set_permission_mode', sessionId: 'sess-1', mode: 'bypassPermissions' as any }, {} as any, 'dev1');
+  handleCommand({ type: 'set_permission_mode', sessionId: 'sess-1', mode: 'bypassPermissions' as any }, send, 'dev1');
   assert.deepEqual(s.modes, ['plan'], 'the unsafe mode was NOT applied');
   const err = replies.at(-1)!;
   assert.equal(err.type, 'error');
@@ -176,16 +176,14 @@ test('set_permission_mode allows plan, refuses an auto-approving mode', () => {
 });
 
 test('spawn refuses an auto-approving permission mode before enqueuing', () => {
-  const { handleCommand, replies } = configHarness();
-  handleCommand({ type: 'spawn', cwd: '/tmp/x', permissionMode: 'bypassPermissions' as any }, {} as any, 'dev1');
+  const { handleCommand, send, replies } = configHarness();
+  handleCommand({ type: 'spawn', cwd: '/tmp/x', permissionMode: 'bypassPermissions' as any }, send, 'dev1');
   assert.equal(replies.at(-1)!.type, 'error', 'the spawn is rejected, not queued');
   assert.match((replies.at(-1) as any).message, /remote approval/i);
 });
 
 test('spawn passes model / plan mode / effort through to the queue', () => {
-  const { handleCommand } = configHarness();
   const enqueued: any[] = [];
-  // re-wire with an enqueue spy
   const sessions = new Map<string, any>();
   const hc = createCommandHandler({
     sessions,
@@ -196,9 +194,8 @@ test('spawn passes model / plan mode / effort through to the queue', () => {
     push: noopPush,
     disconnectDevice: () => {},
     log: () => {},
-    reply: () => {},
   });
-  hc({ type: 'spawn', cwd: '/tmp/x', label: 'y', model: 'opus', permissionMode: 'plan', effort: 'high' }, {} as any, 'dev1');
+  hc({ type: 'spawn', cwd: '/tmp/x', label: 'y', model: 'opus', permissionMode: 'plan', effort: 'high' }, () => {}, 'dev1');
   assert.equal(enqueued.length, 1);
   assert.equal(enqueued[0].model, 'opus');
   assert.equal(enqueued[0].permissionMode, 'plan');
@@ -216,6 +213,7 @@ test('wire: an exited session is dropped from the fleet map', () => {
 
 test('send/interrupt to an exited session gets the "no session" error, never a dead-handle no-op', () => {
   const replies: ServerEvent[] = [];
+  const send = (ev: ServerEvent) => { replies.push(ev); };
   const sessions = new Map<string, any>();
   const handleCommand = createCommandHandler({
     sessions,
@@ -226,15 +224,14 @@ test('send/interrupt to an exited session gets the "no session" error, never a d
     push: noopPush,
     disconnectDevice: () => {},
     log: () => {},
-    reply: (_sock, ev) => replies.push(ev),
   });
 
   const s = new FakeSession('sess-1');
   wire(s as any, sessions, () => {}, () => {});
   s.emit('exit', 0); // the session ends and wire() prunes it
 
-  handleCommand({ type: 'send', sessionId: 'sess-1', text: 'hi' }, {} as any, 'dev1');
-  handleCommand({ type: 'interrupt', sessionId: 'sess-1' }, {} as any, 'dev1');
+  handleCommand({ type: 'send', sessionId: 'sess-1', text: 'hi' }, send, 'dev1');
+  handleCommand({ type: 'interrupt', sessionId: 'sess-1' }, send, 'dev1');
 
   assert.equal(s.sent.length, 0, 'the dead session was never written to');
   assert.equal(s.interrupts, 0);

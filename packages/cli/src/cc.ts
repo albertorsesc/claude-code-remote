@@ -22,7 +22,7 @@ import net from 'node:net';
 import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ReliableClient, neutralizeControlChars, type SessionCrypto } from '@claude-code-remote/protocol';
+import { ReliableClient, LineFramer, type SessionCrypto, type ServerEvent } from '@claude-code-remote/protocol';
 import {
   generateIdentity, exportPublic, exportPrivate, importPublic, importPrivate,
   deriveSessionKey, seal, open, pairingProof, type KeyPair,
@@ -30,6 +30,7 @@ import {
 import { type DeviceRecord, loadDevice, saveDevice, reserveOutSeq } from './deviceStore.ts';
 import { encodePairCode, decodePairCode, tcpTargetFromAddr, type PairPayload } from './pairing.ts';
 import { encode as encodeQr, renderToTerminal } from './qr.ts';
+import { render } from './render.ts';
 
 const SOCK = process.env.CC_CLIENT_SOCK || '/tmp/cc-client.sock';
 const DEVICE_STORE = process.env.CC_DEVICE_STORE ||
@@ -37,16 +38,21 @@ const DEVICE_STORE = process.env.CC_DEVICE_STORE ||
 const WHO = `${os.hostname()}/cli`;
 const [cmd, ...rest] = process.argv.slice(2);
 
+/** Connect to a `host:port` target, splitting on the last colon so IPv4/MagicDNS names (no internal
+ *  colon) survive. Exits with a clear message on a malformed target. */
+function dial(target: string, label = 'address'): net.Socket {
+  const i = target.lastIndexOf(':');
+  if (i < 0) {
+    console.error(`${label} must be host:port, got "${target}"`);
+    process.exit(1);
+  }
+  return net.createConnection({ host: target.slice(0, i), port: Number(target.slice(i + 1)) });
+}
+
 /** Connects over CC_CLIENT_TCP_ADDR (host:port, e.g. a Tailscale address) if set, else the local Unix socket. */
 function connectToDaemon(): net.Socket {
   const tcpAddr = process.env.CC_CLIENT_TCP_ADDR;
-  if (!tcpAddr) return net.createConnection(SOCK);
-  const i = tcpAddr.lastIndexOf(':'); // simple on purpose: IPv4/MagicDNS names have no internal colon
-  if (i < 0) {
-    console.error(`CC_CLIENT_TCP_ADDR must be host:port, got "${tcpAddr}"`);
-    process.exit(1);
-  }
-  return net.createConnection({ host: tcpAddr.slice(0, i), port: Number(tcpAddr.slice(i + 1)) });
+  return tcpAddr ? dial(tcpAddr, 'CC_CLIENT_TCP_ADDR') : net.createConnection(SOCK);
 }
 const TARGET = process.env.CC_CLIENT_TCP_ADDR || SOCK;
 
@@ -89,29 +95,21 @@ function runPair() {
   // in the `paired` reply, is what gets persisted. 'paired' only follows 'pair_qr', so it is set.
   let daemonPubB64 = '';
 
-  let buf = '';
-  sock.on('connect', () => sock.write(JSON.stringify({ type: 'begin_pair' }) + '\n'));
-  sock.on('data', (chunk) => {
-    buf += chunk.toString('utf8');
-    let i: number;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i);
-      buf = buf.slice(i + 1);
-      if (!line.trim()) continue;
-      const msg = JSON.parse(line);
-
-      if (msg.type === 'pair_qr') {
-        const qr = JSON.parse(msg.qr);
-        daemonPubB64 = qr.pk;
-        sendCompletePair(sock, qr.s, devicePublicKeyB64, qr.pk);
-      } else if (msg.type === 'paired') {
-        savePairedDevice(msg.deviceId, keys, devicePublicKeyB64, daemonPubB64);
-      } else if (msg.type === 'pair_failed') {
-        console.error('pairing failed (secret expired or already used, run cc pair again)');
-        process.exit(1);
-      }
+  const framer = new LineFramer({ onLine: (line) => {
+    const msg = JSON.parse(line);
+    if (msg.type === 'pair_qr') {
+      const qr = JSON.parse(msg.qr);
+      daemonPubB64 = qr.pk;
+      sendCompletePair(sock, qr.s, devicePublicKeyB64, qr.pk);
+    } else if (msg.type === 'paired') {
+      savePairedDevice(msg.deviceId, keys, devicePublicKeyB64, daemonPubB64);
+    } else if (msg.type === 'pair_failed') {
+      console.error('pairing failed (secret expired or already used, run cc pair again)');
+      process.exit(1);
     }
-  });
+  } });
+  sock.on('connect', () => sock.write(JSON.stringify({ type: 'begin_pair' }) + '\n'));
+  sock.on('data', (chunk) => framer.push(chunk.toString('utf8')));
 }
 
 /**
@@ -120,7 +118,7 @@ function runPair() {
  * and `pair-qr` (prints a QR for a phone). Both mint the secret here and carry it out of band; it
  * never leaves over the network, so neither reopens the self-service hole.
  */
-function beginPairLocal(render: (info: { qr: any; code: string; target: string | null }) => void) {
+function beginPairLocal(emit: (info: { qr: any; code: string; target: string | null }) => void) {
   // begin_pair is local-only by design, so always use the local Unix socket here, never TCP, even if
   // CC_CLIENT_TCP_ADDR is set in this shell.
   const sock = net.createConnection(SOCK);
@@ -130,27 +128,19 @@ function beginPairLocal(render: (info: { qr: any; code: string; target: string |
     process.exit(1);
   });
 
-  let buf = '';
-  sock.on('connect', () => sock.write(JSON.stringify({ type: 'begin_pair' }) + '\n'));
-  sock.on('data', (chunk) => {
-    buf += chunk.toString('utf8');
-    let i: number;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i);
-      buf = buf.slice(i + 1);
-      if (!line.trim()) continue;
-      const msg = JSON.parse(line);
-
-      if (msg.type === 'pair_qr') {
-        const qr = JSON.parse(msg.qr);
-        render({ qr, code: encodePairCode(msg.qr), target: tcpTargetFromAddr(qr.addr) });
-        process.exit(0);
-      } else if (msg.type === 'pair_failed') {
-        console.error('the daemon refused begin_pair (it is local-only, run this on the daemon machine)');
-        process.exit(1);
-      }
+  const framer = new LineFramer({ onLine: (line) => {
+    const msg = JSON.parse(line);
+    if (msg.type === 'pair_qr') {
+      const qr = JSON.parse(msg.qr);
+      emit({ qr, code: encodePairCode(msg.qr), target: tcpTargetFromAddr(qr.addr) });
+      process.exit(0);
+    } else if (msg.type === 'pair_failed') {
+      console.error('the daemon refused begin_pair (it is local-only, run this on the daemon machine)');
+      process.exit(1);
     }
-  });
+  } });
+  sock.on('connect', () => sock.write(JSON.stringify({ type: 'begin_pair' }) + '\n'));
+  sock.on('data', (chunk) => framer.push(chunk.toString('utf8')));
 }
 
 /** Print the pairing payload as a copy-pasteable code for a SECOND machine (`CC_PAIR_CODE=<code> cc pair`). */
@@ -207,33 +197,24 @@ function runPairFromCode() {
       `Set CC_CLIENT_TCP_ADDR=host:port to the daemon's tailnet address and retry.`);
     process.exit(1);
   }
-  const colon = target.lastIndexOf(':');
-  const sock = net.createConnection({ host: target.slice(0, colon), port: Number(target.slice(colon + 1)) });
+  const sock = dial(target, "the pairing code's daemon address");
   sock.on('error', (e: any) => { console.error(`cannot reach daemon at ${target}: ${e.code ?? e.message}`); process.exit(1); });
 
   const keys = generateIdentity();
   const devicePublicKeyB64 = exportPublic(keys.publicKey);
 
-  let buf = '';
+  const framer = new LineFramer({ onLine: (line) => {
+    const msg = JSON.parse(line);
+    if (msg.type === 'paired') {
+      savePairedDevice(msg.deviceId, keys, devicePublicKeyB64, payload.pk, `CC_CLIENT_TCP_ADDR=${target} cc <command>`);
+    } else if (msg.type === 'pair_failed') {
+      console.error('pairing failed (code expired or already used, mint a fresh one with `cc pair-code` on the daemon machine)');
+      process.exit(1);
+    }
+  } });
   // Straight to complete_pair, the secret came out of band in the code, so there is no begin_pair.
   sock.on('connect', () => sendCompletePair(sock, payload.s, devicePublicKeyB64, payload.pk));
-  sock.on('data', (chunk) => {
-    buf += chunk.toString('utf8');
-    let i: number;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i);
-      buf = buf.slice(i + 1);
-      if (!line.trim()) continue;
-      const msg = JSON.parse(line);
-
-      if (msg.type === 'paired') {
-        savePairedDevice(msg.deviceId, keys, devicePublicKeyB64, payload.pk, `CC_CLIENT_TCP_ADDR=${target} cc <command>`);
-      } else if (msg.type === 'pair_failed') {
-        console.error('pairing failed (code expired or already used, mint a fresh one with `cc pair-code` on the daemon machine)');
-        process.exit(1);
-      }
-    }
-  });
+  sock.on('data', (chunk) => framer.push(chunk.toString('utf8')));
 }
 
 if (cmd === 'pair-code') {
@@ -272,27 +253,61 @@ function parseFlags(args: string[], flags: string[]): { positionals: string[]; o
   return { positionals, opts };
 }
 
-function buildCommandPayload(): unknown | null {
+/**
+ * How the host awaits completion, kept with the payload so a command's whole lifecycle is defined in
+ * one place: `watch` streams forever; a `write` is one-shot confirmed by its ack; a `read` (and
+ * `revoke`) is one-shot confirmed when `terminalEvent` arrives. Adding a command is a single case.
+ */
+type CommandPlan = { payload: unknown; kind: 'watch' | 'read' | 'write'; terminalEvent?: ServerEvent['type'] };
+
+function resolveCommand(): CommandPlan {
   switch (cmd) {
-    case 'watch': return null;
-    case 'history': return { type: 'history', limit: rest[0] ? Number(rest[0]) : undefined };
+    case 'watch':
+      return { payload: null, kind: 'watch' };
+    case 'history':
+      return {
+        payload: { type: 'history', limit: rest[0] ? Number(rest[0]) : undefined },
+        kind: 'read',
+        terminalEvent: 'approval_history',
+      };
     case 'spawn': {
       // cc spawn <cwd> [label] [--model X] [--mode plan] [--effort high]
       const { positionals, opts } = parseFlags(rest, ['model', 'mode', 'effort']);
       return {
-        type: 'spawn', cwd: positionals[0], label: positionals[1],
-        model: opts.model, permissionMode: opts.mode, effort: opts.effort,
+        payload: {
+          type: 'spawn',
+          cwd: positionals[0],
+          label: positionals[1],
+          model: opts.model,
+          permissionMode: opts.mode,
+          effort: opts.effort,
+        },
+        kind: 'write',
       };
     }
-    case 'send': return { type: 'send', sessionId: rest[0], text: rest.slice(1).join(' ') };
-    case 'interrupt': return { type: 'interrupt', sessionId: rest[0] };
-    case 'model': return { type: 'set_model', sessionId: rest[0], model: rest[1] };
-    case 'mode': return { type: 'set_permission_mode', sessionId: rest[0], mode: rest[1] };
-    // effort has no control request; it is the `/effort` slash command delivered as user text.
-    case 'effort': return { type: 'send', sessionId: rest[0], text: `/effort ${rest[1]}` };
-    case 'allow': return { type: 'decide', toolUseId: rest[0], decision: 'allow', reason: rest.slice(1).join(' '), by: WHO };
-    case 'deny': return { type: 'decide', toolUseId: rest[0], decision: 'deny', reason: rest.slice(1).join(' '), by: WHO };
-    case 'revoke': return { type: 'revoke', deviceId: rest[0] };
+    case 'send':
+      return { payload: { type: 'send', sessionId: rest[0], text: rest.slice(1).join(' ') }, kind: 'write' };
+    case 'interrupt':
+      return { payload: { type: 'interrupt', sessionId: rest[0] }, kind: 'write' };
+    case 'model':
+      return { payload: { type: 'set_model', sessionId: rest[0], model: rest[1] }, kind: 'write' };
+    case 'mode':
+      return { payload: { type: 'set_permission_mode', sessionId: rest[0], mode: rest[1] }, kind: 'write' };
+    case 'effort':
+      // no control request; the `/effort` slash command is delivered as user text.
+      return { payload: { type: 'send', sessionId: rest[0], text: `/effort ${rest[1]}` }, kind: 'write' };
+    case 'allow':
+      return {
+        payload: { type: 'decide', toolUseId: rest[0], decision: 'allow', reason: rest.slice(1).join(' '), by: WHO },
+        kind: 'write',
+      };
+    case 'deny':
+      return {
+        payload: { type: 'decide', toolUseId: rest[0], decision: 'deny', reason: rest.slice(1).join(' '), by: WHO },
+        kind: 'write',
+      };
+    case 'revoke':
+      return { payload: { type: 'revoke', deviceId: rest[0] }, kind: 'write', terminalEvent: 'revoked' };
     default:
       console.error('usage: cc pair|pair-code|watch|history|spawn|send|interrupt|model|mode|effort|allow|deny|revoke');
       return process.exit(1);
@@ -333,11 +348,11 @@ function runAuthenticated() {
   const RECONNECT_BASE_MS = Number(process.env.CC_RECONNECT_BASE_MS || 1000);
   const RECONNECT_MAX_DELAY_MS = Number(process.env.CC_RECONNECT_MAX_DELAY_MS || 15000);
 
-  const isWatch = cmd === 'watch';
-  const isRead = cmd === 'history';
-  const isWrite = !isWatch && !isRead;
+  const { payload, kind, terminalEvent } = resolveCommand();
+  const isWatch = kind === 'watch';
+  const isRead = kind === 'read';
+  const isWrite = kind === 'write';
   const isRevokeSelf = cmd === 'revoke' && rest[0] === device.deviceId;
-  const payload = buildCommandPayload();
 
   // Host-side lifecycle state (the reliability state is inside `client`).
   let myCmdSeq = 0;      // the seq of this process's one write command
@@ -376,8 +391,7 @@ function runAuthenticated() {
       // (session_list/session_update/job_update/stream) is not this command's business, ignore it
       // and keep waiting for the ack/reply.
       if (ev.type === 'error') { render(ev); process.exit(1); }
-      if (isRead && ev.type === 'approval_history') { render(ev); process.exit(0); }
-      if (cmd === 'revoke' && ev.type === 'revoked') { render(ev); process.exit(0); }
+      if (terminalEvent && ev.type === terminalEvent) { render(ev); process.exit(0); }
     },
 
     onHelloRejected: () => {
@@ -409,18 +423,12 @@ function runAuthenticated() {
 
     sock.on('connect', () => { client.onOpen(); flush(); });
 
-    let buf = '';
-    sock.on('data', (chunk) => {
-      buf += chunk.toString('utf8');
-      let i: number;
-      while ((i = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, i);
-        buf = buf.slice(i + 1);
-        if (!line.trim()) continue;
-        client.onMessage(JSON.parse(line));
-        flush(); // resends, the issued command, and any hello all leave here in order
-      }
+    const framer = new LineFramer({
+      onLine: (line) => { client.onMessage(JSON.parse(line)); flush(); }, // resends, issued command, hello all leave in order
+      maxBytes: 16 * 1024 * 1024, // drop a peer that streams without a frame boundary rather than grow unbounded
+      onOverflow: (n, cap) => { console.error(`[dropping connection: ${n} bytes with no frame boundary (cap ${cap})]`); sock.destroy(); },
     });
+    sock.on('data', (chunk) => framer.push(chunk.toString('utf8')));
 
     sock.on('close', () => {
       client.onClose();
@@ -438,76 +446,3 @@ function runAuthenticated() {
   connect();
 }
 
-const ago = (t: number) => `${Math.round((Date.now() - t) / 1000)}s ago`;
-const left = (t: number) => `${Math.max(0, Math.round((t - Date.now()) / 60000))}m left`;
-
-/**
- * Neutralize control characters in any daemon/session-supplied string before printing it. The
- * rendered fleet view and audit trail (`cc history`) are a trust record, and fields like a session
- * `label`, a tool name, an approval `by`, or a decision `reason` are controlled by an authenticated-
- * but-untrusted peer; an embedded newline or ANSI escape would otherwise forge a whole line or drive
- * the reviewing terminal. Same shared neutralizer the daemon uses for its operator log.
- */
-const safe = (v: unknown): string => neutralizeControlChars(String(v ?? ''));
-
-const BADGE: Record<string, string> = {
-  waiting_approval: 'NEEDS YOU',
-  waiting_input: 'NEEDS YOU',
-  working: 'working',
-  idle: 'idle',
-  finished: 'done',
-  errored: 'ERROR',
-  starting: 'starting',
-  ready: 'ready',
-};
-
-function render(ev: any) {
-  switch (ev.type) {
-    case 'session_list':
-      if (!ev.sessions.length) { console.log('(no sessions)'); break; }
-      console.log('\nSESSIONS');
-      for (const s of ev.sessions) {
-        console.log(`  ${(BADGE[s.state] ?? safe(s.state)).padEnd(10)} ${safe(s.label).padEnd(18)} ${s.id.slice(0, 8)}  ${ago(s.lastActivityAt)}`);
-      }
-      break;
-    case 'session_update': {
-      const s = ev.session;
-      console.log(`[session] ${(BADGE[s.state] ?? safe(s.state)).padEnd(10)} ${safe(s.label)} ${s.id.slice(0, 8)}` +
-        (s.pendingApprovals ? `  (${s.pendingApprovals} pending)` : ''));
-      break;
-    }
-    case 'approval_pending': {
-      const a = ev.approval;
-      const detail = a.toolInput?.command ?? a.toolInput?.file_path ?? '';
-      console.log(`\n  APPROVAL NEEDED  ${safe(a.toolName)}  [${left(a.deadlineAt)}]`);
-      if (a.description) console.log(`     ${safe(a.description)}`);
-      if (detail) console.log(`     ${safe(detail).slice(0, 120)}`);
-      console.log(`     cc allow ${safe(a.toolUseId)}   |   cc deny ${safe(a.toolUseId)} "reason"\n`);
-      break;
-    }
-    case 'approval_resolved':
-      console.log(`  resolved ${safe(ev.toolUseId).slice(0, 16)} -> ${safe(ev.decision)} by ${safe(ev.by)}`);
-      break;
-    case 'job_update': {
-      const j = ev.job;
-      console.log(`[job] ${safe(j.state).padEnd(8)} ${safe(j.label ?? j.cwd)}` + (j.error ? `  ${safe(j.error)}` : ''));
-      break;
-    }
-    case 'revoked':
-      console.log(`  revoked device ${safe(ev.deviceId)}`);
-      break;
-    case 'approval_history': {
-      if (!ev.approvals.length) { console.log('(no decided approvals yet)'); break; }
-      console.log('\nAPPROVAL HISTORY (most recent first)');
-      for (const a of ev.approvals) {
-        const when = new Date(a.decidedAt).toISOString().slice(0, 19).replace('T', ' ');
-        console.log(`  ${when}  ${safe(a.decision).toUpperCase().padEnd(5)} ${safe(a.toolName).padEnd(10)} ${safe(a.decidedBy)}` +
-          (a.reason ? `  "${safe(a.reason)}"` : ''));
-      }
-      break;
-    }
-    case 'error':
-      console.error(`  error: ${safe(ev.message)}`);
-      break;
-  }
-}
