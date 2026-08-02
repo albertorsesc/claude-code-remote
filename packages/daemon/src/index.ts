@@ -25,9 +25,10 @@ import { createExpoPushSender, noopPushSender } from './infrastructure/expoPush.
 import { ApprovalBroker } from './domain/approvals.ts';
 import { DeviceSessionRegistry } from './domain/deviceSessions.ts';
 
-import { JobQueue, mergeSnapshotJobs, type Job, type SpawnRequest } from './application/jobs.ts';
+import { JobQueue, type Job, type SpawnRequest } from './application/jobs.ts';
 import { wire, createCommandHandler } from './application/commands.ts';
 import { createPushService } from './application/pushService.ts';
+import { buildSnapshot } from './application/snapshot.ts';
 
 import { ClientHub } from './interface/clientHub.ts';
 import { createHookServer } from './interface/hookBridge.ts';
@@ -92,12 +93,12 @@ function sessionByClaudeId(claudeSessionId: string | undefined): Session | undef
 /** Today's full snapshot: used on a first-ever hello, or whenever resume isn't possible
  *  (daemon-restart guard or a genuine replay-buffer gap). */
 function snapshot(): ServerEvent[] {
-  const jobs = mergeSnapshotJobs(jobQueue.list(), db.queryRecentJobs(50));
-  return [
-    { type: 'session_list', sessions: [...sessions.values()].map((s) => s.info()) },
-    ...broker.list().map((a): ServerEvent => ({ type: 'approval_pending', approval: a })),
-    ...jobs.map((job): ServerEvent => ({ type: 'job_update', job })),
-  ];
+  return buildSnapshot(
+    [...sessions.values()].map((s) => s.info()),
+    broker.list(),
+    jobQueue.list(),
+    db.queryRecentJobs(50),
+  );
 }
 
 // --- sessions and jobs -----------------------------------------------------------------------
