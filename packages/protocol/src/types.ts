@@ -72,10 +72,11 @@ export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
  *
  * The daemon's whole purpose is to gate tool calls through remote approval, which rests on the
  * approve-bridge PreToolUse hook firing. `plan` keeps that intact (the agent plans, and any tool it
- * proposes still blocks for approval). The auto-approving modes (`acceptEdits`, `auto`,
- * `bypassPermissions`, `dontAsk`) can let a tool run without a remote decision, which is exactly the
- * guarantee this daemon exists to provide, so the daemon is deliberately restrictive about them
- * (see the spawn/set handlers). Omitting the mode entirely uses `claude`'s own default.
+ * proposes still blocks for approval). Other modes alter approval behavior: `acceptEdits`,
+ * `auto`, and `bypassPermissions` can approve calls automatically; `dontAsk` automatically denies
+ * unapproved calls; and `manual` aliases Claude Code's standard mode. The daemon conservatively
+ * refuses all these explicit selections (see the spawn/set handlers). Omitting the mode uses
+ * `claude`'s own default.
  */
 export type PermissionMode = 'acceptEdits' | 'auto' | 'bypassPermissions' | 'manual' | 'dontAsk' | 'plan';
 

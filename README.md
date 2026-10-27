@@ -181,10 +181,13 @@ retry.
 
 Slash commands, subagents, skills, MCP servers, plugins, and hooks are all inherited by every
 headless session and driven through `send` as ordinary text. Per-session model, permission mode, and
-effort are settable at spawn and mid-session. One deliberate restriction: the daemon refuses
-permission modes that auto-approve tools (`bypassPermissions`, `acceptEdits`, `auto`, `dontAsk`,
-`manual`), since a session that runs tools without a remote decision defeats the whole point. `plan`
-is allowed, and omitting the mode uses the default per-tool approval flow.
+effort are settable at spawn and mid-session. One deliberate restriction: the daemon only accepts `plan` as an explicit permission mode.
+It refuses `bypassPermissions`, `acceptEdits`, `auto`, `dontAsk`, and `manual`. These modes
+do not all auto-approve tools: `dontAsk` automatically denies tool calls requiring approval
+unless already permitted, while `manual` is an alias for the standard mode. See
+[Claude Code's permission modes](https://code.claude.com/docs/en/permissions#permission-modes).
+The daemon keeps its explicit mode selection conservative; omitting the mode uses Claude
+Code's normal per-tool approval flow.
 
 ## Reach it from your phone or another machine
 
