@@ -8,7 +8,7 @@ test('plan is allowed (it preserves per-tool approval)', () => {
   assert.equal(permissionModeIsAllowed('plan'), true);
 });
 
-test('every auto-approving / unknown mode is refused', () => {
+test('all unsupported explicit permission modes are refused', () => {
   for (const m of ['acceptEdits', 'auto', 'bypassPermissions', 'manual', 'dontAsk'] as const) {
     assert.equal(permissionModeIsAllowed(m), false, `${m} must be refused`);
   }
